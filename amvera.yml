@@ -2,8 +2,6 @@ meta:
   environment: nodejs
   toolchain:
     name: npm
-build:
-  npmInstall: true
 run:
   command: node server.js
   persistentPort: 80
