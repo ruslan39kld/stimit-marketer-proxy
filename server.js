@@ -73,7 +73,11 @@ async function publishTelegram(target, text, imageUrl) {
       body: JSON.stringify({ chat_id, photo: imageUrl, caption: text }),
     });
     const data = await r.json();
-    if (!data.ok) throw new Error('telegram_api_error');
+    if (!data.ok) {
+      console.log(`publish TG ERROR: ${data.description || 'unknown'}`);
+      throw new Error('telegram_api_error');
+    }
+    console.log('publish TG OK');
     return { id: data.result?.message_id };
   }
   const r = await fetch(`${TG_API}/bot${token}/sendMessage`, {
@@ -82,7 +86,11 @@ async function publishTelegram(target, text, imageUrl) {
     body: JSON.stringify({ chat_id, text }),
   });
   const data = await r.json();
-  if (!data.ok) throw new Error('telegram_api_error');
+  if (!data.ok) {
+    console.log(`publish TG ERROR: ${data.description || 'unknown'}`);
+    throw new Error('telegram_api_error');
+  }
+  console.log('publish TG OK');
   return { id: data.result?.message_id };
 }
 
@@ -96,7 +104,11 @@ async function vkCall(method, params) {
   });
   const r = await fetch(`${VK_API}/${method}`, { method: 'POST', body });
   const data = await r.json();
-  if (data.error) throw new Error(`vk_api_error_${data.error.error_code}`);
+  if (data.error) {
+    console.log(`publish VK ERROR: ${data.error.error_msg || 'unknown'} (code ${data.error.error_code})`);
+    throw new Error(`vk_api_error_${data.error.error_code}`);
+  }
+  console.log(`publish VK OK: ${method}`);
   return data.response;
 }
 
@@ -113,6 +125,9 @@ async function vkUploadWallPhoto(imageUrl) {
   form.append('photo', blob, 'photo.jpg');
   const up = await fetch(server.upload_url, { method: 'POST', body: form });
   const uploaded = await up.json();
+  if (uploaded.error) {
+    console.log(`publish VK ERROR: ${uploaded.error.error_msg || 'unknown'} (code ${uploaded.error.error_code})`);
+  }
   if (!uploaded.photo) throw new Error('vk_upload_failed');
 
   const saved = await vkCall('photos.saveWallPhoto', {
