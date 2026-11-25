@@ -4,5 +4,5 @@ meta:
     name: npm
 run:
   command: node server.js
-  persistentPort: 80
-  containerPort: 80
+  persistentPort: 3000
+  containerPort: 3000
