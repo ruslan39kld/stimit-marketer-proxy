@@ -6,6 +6,4 @@ meta:
 build: {}
 run:
   command: node server.js
-  persistentPort: 3000
   containerPort: 3000
-  persistenceMount: /data
