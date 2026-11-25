@@ -1,0 +1,1825 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI-маркетолог — живое демо | STIMIT</title>
+    <meta
+      name="description"
+      content="Автономный AI-агент пишет посты, публикует их в Telegram и VK и отвечает подписчикам. Живое демо от STIMIT"
+    />
+    <meta property="og:title" content="AI-маркетолог — живое демо | STIMIT" />
+    <meta
+      property="og:description"
+      content="Автономный AI-агент пишет посты, публикует их в Telegram и VK и отвечает подписчикам. Живое демо от STIMIT"
+    />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              stimit: {
+                900: '#13294B',
+                800: '#1B3A6B',
+                700: '#244B8A',
+                600: '#2E5FA8',
+                50: '#EEF4FB',
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      :root {
+        --stimit-navy: #1b3a6b;
+        --stimit-navy-light: #285294;
+        --stimit-navy-dark: #13294b;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          'Helvetica Neue', Arial, sans-serif;
+        background-color: #ecf2f9;
+        color: #0f172a;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* Лёгкий технологичный живой фон */
+      .tech-bg {
+        background-color: #edf3fa;
+        background-image:
+          radial-gradient(at 12% 18%, rgba(34, 211, 238, 0.14) 0px, transparent 48%),
+          radial-gradient(at 88% 82%, rgba(27, 58, 107, 0.13) 0px, transparent 52%),
+          linear-gradient(to right, rgba(27, 58, 107, 0.04) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(27, 58, 107, 0.04) 1px, transparent 1px);
+        background-size: 140% 140%, 140% 140%, 32px 32px, 32px 32px;
+        animation: techBgDrift 22s ease-in-out infinite alternate;
+      }
+
+      @keyframes techBgDrift {
+        0% {
+          background-position: 0% 0%, 100% 100%, 0 0, 0 0;
+        }
+        100% {
+          background-position: 18% 12%, 82% 88%, 0 0, 0 0;
+        }
+      }
+
+      .stimit-header-bg {
+        background: linear-gradient(135deg, #13294b 0%, #1b3a6b 50%, #163464 100%);
+        box-shadow: 0 4px 24px -6px rgba(19, 41, 75, 0.45),
+          0 1px 0 rgba(34, 211, 238, 0.35);
+      }
+
+      @keyframes ctaGlowPulse {
+        0%,
+        100% {
+          box-shadow: 0 6px 20px -4px rgba(27, 58, 107, 0.45),
+            0 0 0 0 rgba(34, 211, 238, 0.42);
+        }
+        50% {
+          box-shadow: 0 10px 28px -4px rgba(14, 165, 233, 0.45),
+            0 0 0 6px rgba(34, 211, 238, 0);
+        }
+      }
+
+      .stimit-btn-gradient {
+        background: linear-gradient(135deg, #1b3a6b 0%, #24579d 55%, #0ea5e9 145%);
+        transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+          box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1),
+          opacity 180ms ease;
+      }
+
+      .stimit-btn-gradient:not(:disabled) {
+        animation: ctaGlowPulse 2.8s ease-in-out infinite;
+      }
+
+      .stimit-btn-gradient:hover:not(:disabled) {
+        transform: translateY(-1.5px);
+        box-shadow: 0 12px 28px -6px rgba(14, 165, 233, 0.5),
+          0 0 18px rgba(34, 211, 238, 0.25);
+      }
+
+      .stimit-btn-gradient:active:not(:disabled) {
+        transform: translateY(0);
+      }
+
+      .stimit-card {
+        background: rgba(255, 255, 255, 0.94);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(56, 189, 248, 0.28);
+        box-shadow: 0 10px 30px -10px rgba(27, 58, 107, 0.14),
+          0 0 0 1px rgba(27, 58, 107, 0.04),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        transition: border-color 220ms ease, box-shadow 220ms ease;
+      }
+
+      .stimit-card:hover {
+        border-color: rgba(14, 165, 233, 0.45);
+        box-shadow: 0 14px 36px -10px rgba(27, 58, 107, 0.18),
+          0 0 16px -4px rgba(34, 211, 238, 0.16),
+          inset 0 1px 0 rgba(255, 255, 255, 0.95);
+      }
+
+      .tg-feed-bg {
+        background-color: #e7eff8;
+        background-image: radial-gradient(
+            rgba(27, 58, 107, 0.055) 1px,
+            transparent 1px
+          );
+        background-size: 16px 16px;
+      }
+
+      .tabular-nums {
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* Вертикальная светящаяся линия-конвейер позади этапов */
+      .pipeline-track {
+        position: relative;
+      }
+
+      .pipeline-track::before {
+        content: '';
+        position: absolute;
+        left: 26px;
+        top: 22px;
+        bottom: 22px;
+        width: 2px;
+        background: linear-gradient(
+          180deg,
+          rgba(34, 211, 238, 0.85) 0%,
+          rgba(37, 99, 235, 0.7) 50%,
+          rgba(34, 211, 238, 0.85) 100%
+        );
+        box-shadow: 0 0 10px rgba(34, 211, 238, 0.65);
+        border-radius: 9999px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      @keyframes stageActivePulse {
+        0%,
+        100% {
+          box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.55),
+            0 4px 16px -2px rgba(6, 182, 212, 0.28);
+        }
+        50% {
+          box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.85),
+            0 6px 24px 0 rgba(34, 211, 238, 0.42);
+        }
+      }
+
+      .stage-active-glow {
+        animation: stageActivePulse 1.6s ease-in-out infinite;
+      }
+
+      @keyframes pulseDot {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.45;
+          transform: scale(1.28);
+        }
+      }
+
+      .live-dot {
+        animation: pulseDot 1.8s ease-in-out infinite;
+      }
+
+      @keyframes postSlideIn {
+        0% {
+          opacity: 0;
+          transform: translateY(-14px) scale(0.985);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .animate-post-in {
+        animation: postSlideIn 420ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      @keyframes fadeSlideUp {
+        0% {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .animate-fade-up {
+        animation: fadeSlideUp 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      /* Smooth accordion for stage notes and details */
+      .accordion-content {
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows 280ms cubic-bezier(0.16, 1, 0.3, 1),
+          opacity 240ms ease;
+        opacity: 0;
+      }
+
+      .accordion-content.is-open {
+        grid-template-rows: 1fr;
+        opacity: 1;
+      }
+
+      .accordion-inner {
+        overflow: hidden;
+      }
+
+      /* Custom subtle scrollbar for Telegram feed */
+      .tg-scroll::-webkit-scrollbar {
+        width: 5px;
+      }
+      .tg-scroll::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .tg-scroll::-webkit-scrollbar-thumb {
+        background: rgba(27, 58, 107, 0.22);
+        border-radius: 9999px;
+      }
+      .tg-scroll::-webkit-scrollbar-thumb:hover {
+        background: rgba(14, 165, 233, 0.48);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .live-dot,
+        .animate-post-in,
+        .animate-fade-up,
+        .tech-bg,
+        .stimit-btn-gradient:not(:disabled),
+        .stage-active-glow {
+          animation: none !important;
+        }
+        .accordion-content,
+        .stimit-btn-gradient,
+        .stimit-card {
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="min-h-screen lg:h-screen lg:overflow-hidden flex flex-col tech-bg">
+    <!-- Шапка -->
+    <header class="shrink-0 sticky top-0 z-30 stimit-header-bg text-white">
+      <div
+        class="w-full px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5"
+      >
+        <div class="flex items-center gap-3 min-w-0">
+          <span
+            class="text-xl sm:text-2xl font-extrabold tracking-tight text-white whitespace-nowrap shrink-0"
+          >
+            STIMIT
+          </span>
+          <span class="h-5 w-px bg-cyan-300/35 shrink-0" aria-hidden="true"></span>
+          <h1
+            class="text-sm sm:text-base font-semibold text-blue-50/95 truncate"
+          >
+            AI-маркетолог — живое демо
+          </h1>
+        </div>
+
+        <div class="flex flex-col sm:items-end gap-1 shrink-0">
+          <div
+            class="inline-flex items-center gap-2 self-start sm:self-end bg-white/10 border border-cyan-300/35 rounded-full px-3 py-1"
+          >
+            <span
+              class="w-2 h-2 rounded-full bg-emerald-400 live-dot shrink-0"
+              aria-hidden="true"
+            ></span>
+            <span
+              class="text-[11px] font-bold tracking-wider uppercase text-white whitespace-nowrap"
+            >
+              НАСТОЯЩАЯ МОДЕЛЬ
+            </span>
+          </div>
+          <p class="text-xs text-blue-100/85">
+            Ответы генерирует AI в реальном времени
+          </p>
+        </div>
+      </div>
+
+      <!-- Компактная CTA-плашка STIMIT -->
+      <div
+        class="w-full border-t border-cyan-300/20 bg-[#112545]/75 px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2"
+      >
+        <p class="text-xs text-blue-100/95 leading-snug">
+          Живое демо STIMIT · Хотите такого агента для своего бизнеса?
+        </p>
+        <a
+          href="https://stimit.ru"
+          target="_blank"
+          rel="noopener"
+          class="inline-flex items-center gap-1.5 rounded-lg bg-white text-[#13294B] hover:bg-cyan-50 border border-cyan-200/80 px-3 py-1 text-xs font-bold shadow-sm transition-colors whitespace-nowrap shrink-0"
+        >
+          <span>Заказать на stimit.ru</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+          </svg>
+        </a>
+      </div>
+    </header>
+
+    <!-- Основная 3-колоночная сетка -->
+    <main class="flex-1 lg:min-h-0 w-full px-4 sm:px-6 py-4 sm:py-5 lg:flex lg:flex-col">
+      <div
+        class="grid grid-cols-1 lg:grid-cols-10 gap-4 lg:gap-5 lg:flex-1 lg:min-h-0 items-stretch"
+      >
+        <!-- ЛЕВАЯ КОЛОНКА (~30%): Демо-канал STIMIT -->
+        <section
+          aria-label="Демо-канал STIMIT"
+          class="order-3 lg:order-none lg:col-span-3 stimit-card rounded-2xl overflow-hidden flex flex-col lg:h-full lg:min-h-0"
+        >
+          <!-- Заголовок канала в стиле Telegram -->
+          <div
+            class="shrink-0 px-4 py-3 bg-white/95 border-b border-cyan-500/15 flex items-center justify-between gap-3"
+          >
+            <div class="flex items-center gap-3 min-w-0">
+              <div
+                class="w-9 h-9 rounded-full stimit-header-bg text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm ring-2 ring-cyan-400/25"
+                aria-hidden="true"
+              >
+                ST
+              </div>
+              <div class="min-w-0">
+                <h2 class="text-sm font-bold text-slate-900 truncate">
+                  Демо-канал STIMIT
+                </h2>
+                <p class="text-xs text-slate-500 truncate">
+                  Telegram-канал · витрина прототипов
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Лента постов -->
+          <div
+            id="telegram-feed"
+            class="tg-feed-bg tg-scroll p-3.5 space-y-2.5 lg:flex-1 lg:min-h-0 lg:overflow-y-auto"
+          >
+            <!-- Посты рендерятся скриптом -->
+          </div>
+
+          <!-- Вопросы подписчиков -->
+          <div class="shrink-0 bg-white/95 border-t border-cyan-500/15 p-3.5">
+            <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2.5">
+              Вопросы подписчиков
+            </h3>
+            <div id="subscriber-questions" class="space-y-2">
+              <!-- Вопросы рендерятся скриптом -->
+            </div>
+          </div>
+        </section>
+
+        <!-- ЦЕНТРАЛЬНАЯ КОЛОНКА (~40%): Задача агенту -->
+        <section
+          aria-label="Задача агенту"
+          class="order-1 lg:order-none lg:col-span-4 stimit-card rounded-2xl p-4 sm:p-5 flex flex-col lg:h-full lg:min-h-0"
+        >
+          <!-- Состояние 429: квота исчерпана (скрыто по умолчанию) -->
+          <div
+            id="quota-exceeded-view"
+            class="hidden flex-1 flex flex-col items-center justify-center py-8 px-4 text-center animate-fade-up"
+          >
+            <div
+              class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-cyan-50 border border-cyan-200 text-[#1B3A6B] flex items-center justify-center shadow-sm"
+              aria-hidden="true"
+            >
+              <svg
+                class="w-7 h-7"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"
+                />
+              </svg>
+            </div>
+            <h2 class="text-lg font-bold text-slate-900 mb-2">
+              Агент вернётся завтра
+            </h2>
+            <p class="text-sm text-slate-600 leading-relaxed max-w-md mx-auto">
+              Дневной лимит демо исчерпан — загляните завтра или посмотрите
+              сценарные прототипы STIMIT.
+            </p>
+          </div>
+
+          <!-- Основная форма задачи -->
+          <div id="task-form-view" class="flex-1 min-h-0 flex flex-col">
+            <div class="shrink-0 flex items-center justify-between gap-2 mb-2.5">
+              <h2 class="text-lg font-bold text-slate-900">Задача агенту</h2>
+              <span
+                id="char-counter"
+                class="text-xs font-semibold tabular-nums text-slate-500 transition-colors duration-200"
+              >
+                0/500
+              </span>
+            </div>
+
+            <p
+              class="shrink-0 mb-3 rounded-xl border border-cyan-500/20 bg-slate-50/90 px-3 py-2 text-xs leading-relaxed text-slate-600 break-words"
+            >
+              Как попробовать за 30 секунд: 1) выберите пример задачи или напишите свою → 2) нажмите «Запустить агента» → 3) нажмите «Опубликовать» и откройте демо-группу — пост появится там вживую
+            </p>
+
+            <div class="flex-1 min-h-0 flex flex-col gap-3">
+              <label for="task-input" class="sr-only">
+                Текст задачи для AI-маркетолога
+              </label>
+              <textarea
+                id="task-input"
+                rows="5"
+                placeholder="Например: сделай пост про скидку 20% на аудит процессов"
+                class="flex-1 min-h-[160px] lg:min-h-0 w-full rounded-xl border border-slate-300/90 bg-slate-50/70 px-4 py-3.5 text-sm leading-relaxed text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all duration-200 resize-none"
+              ></textarea>
+
+              <!-- Мягкая подсказка / уведомление / ошибка -->
+              <div
+                id="feedback-banner"
+                class="hidden shrink-0 rounded-xl px-3.5 py-2.5 text-sm animate-fade-up"
+                role="alert"
+              ></div>
+
+              <!-- Кнопка запуска + пузырь-подсказка первого визита -->
+              <div class="relative shrink-0">
+                <div
+                  id="first-visit-bubble"
+                  class="hidden absolute bottom-full mb-2.5 left-1/2 -translate-x-1/2 z-20 max-w-[calc(100vw-4rem)] sm:whitespace-nowrap text-center rounded-xl bg-[#1B3A6B] px-3 py-1.5 text-xs font-medium text-white shadow-lg ring-1 ring-cyan-400/35 animate-fade-up pointer-events-none"
+                  role="status"
+                >
+                  Агент напишет пост и покажет, как думает
+                  <span
+                    class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-[#1B3A6B] border-r border-b border-cyan-400/35"
+                    aria-hidden="true"
+                  ></span>
+                </div>
+
+                <button
+                  id="run-agent-btn"
+                  type="button"
+                  class="w-full stimit-btn-gradient text-white font-semibold text-sm sm:text-base rounded-xl px-5 py-3.5 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-cyan-500"
+                >
+                  <span id="run-btn-spinner" class="hidden">
+                    <svg
+                      class="w-4 h-4 animate-spin text-white"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="3"
+                      ></circle>
+                      <path
+                        class="opacity-90"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
+                      ></path>
+                    </svg>
+                  </span>
+                  <span id="run-btn-label">Запустить агента</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Чипсы-примеры -->
+            <div class="shrink-0 mt-4 pt-3.5 border-t border-cyan-500/15">
+              <p class="text-xs font-semibold text-slate-500 mb-2">
+                Примеры задач:
+              </p>
+              <div id="example-chips" class="flex flex-wrap gap-2">
+                <!-- Чипсы рендерятся скриптом -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ПРАВАЯ КОЛОНКА (~30%): Ход работы -->
+        <aside
+          aria-label="Ход работы"
+          class="order-2 lg:order-none lg:col-span-3 flex flex-col gap-3 lg:h-full lg:min-h-0 lg:overflow-y-auto tg-scroll lg:pr-0.5"
+        >
+          <div class="order-2 lg:order-none stimit-card rounded-2xl p-4 sm:p-5 flex-1 min-h-[380px] flex flex-col">
+            <div class="shrink-0 flex items-center justify-between gap-2 mb-3">
+              <h2 class="text-base font-bold text-slate-900">Ход работы</h2>
+              <span
+                id="total-timer"
+                class="text-xs font-semibold tabular-nums text-[#1B3A6B] bg-cyan-50/80 border border-cyan-400/35 px-2.5 py-1 rounded-lg transition-all duration-200"
+              >
+                Прошло: 0 сек
+              </span>
+            </div>
+
+            <!-- Заглушка до первого запуска -->
+            <div
+              id="pipeline-placeholder"
+              class="shrink-0 rounded-xl border border-dashed border-cyan-500/40 bg-gradient-to-br from-slate-50/90 via-white to-cyan-50/50 px-4 py-3 mb-3 flex flex-col items-center justify-center text-center gap-1.5"
+            >
+              <div
+                class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#1B3A6B] to-cyan-500 text-white flex items-center justify-center shadow-md shadow-cyan-500/20"
+                aria-hidden="true"
+              >
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5"
+                  />
+                </svg>
+              </div>
+              <p class="text-sm font-semibold text-slate-700 leading-snug">
+                Здесь агент покажет, как думает
+              </p>
+            </div>
+
+            <!-- Вертикальный конвейер из 6 этапов -->
+            <ol
+              id="pipeline-stages"
+              class="pipeline-track flex-1 min-h-0 flex flex-col justify-between gap-1.5"
+            >
+              <!-- Этапы рендерятся скриптом -->
+            </ol>
+          </div>
+
+          <!-- Раскрывающийся блок «Подробнее: как думал агент» -->
+          <div
+            id="agent-details-card"
+            class="order-3 lg:order-none hidden shrink-0 stimit-card rounded-2xl overflow-hidden animate-fade-up"
+          >
+            <button
+              id="agent-details-toggle"
+              type="button"
+              aria-expanded="false"
+              class="w-full px-5 py-3 flex items-center justify-between gap-3 text-left hover:bg-cyan-50/40 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-500"
+            >
+              <span class="text-sm font-bold text-[#1B3A6B]">
+                Подробнее: как думал агент
+              </span>
+              <svg
+                id="agent-details-chevron"
+                class="w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+            <div id="agent-details-body" class="accordion-content">
+              <div class="accordion-inner">
+                <ul
+                  id="agent-details-list"
+                  class="px-5 pb-4 pt-2 space-y-2.5 border-t border-slate-100 max-h-[180px] overflow-y-auto tg-scroll"
+                ></ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Панель публикации результата (появляется после генерации поста) -->
+          <div
+            id="publish-panel"
+            class="order-4 lg:order-none hidden shrink-0 stimit-card rounded-2xl p-4 animate-fade-up"
+          >
+            <h3 class="text-sm font-bold text-slate-900 mb-2.5">
+              Куда опубликовать
+            </h3>
+
+            <div id="publish-controls">
+              <div id="publish-groups-list" class="space-y-2 mb-3">
+                <!-- Статусы публикации по группам рендерятся скриптом -->
+              </div>
+
+              <button
+                id="publish-selected-btn"
+                type="button"
+                class="w-full stimit-btn-gradient text-white font-semibold text-xs sm:text-sm rounded-xl px-4 py-2.5 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-cyan-500"
+              >
+                <span id="publish-btn-spinner" class="hidden">
+                  <svg
+                    class="w-3.5 h-3.5 animate-spin text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="3"
+                    ></circle>
+                    <path
+                      class="opacity-90"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
+                    ></path>
+                  </svg>
+                </span>
+                <span id="publish-btn-label">Опубликовать в демо-группы</span>
+              </button>
+
+              <p class="mt-2 text-[11px] leading-snug text-slate-500">
+                Демо-режим: публикация только по вашему подтверждению, автопилот включается на боевом сервере
+              </p>
+            </div>
+
+            <!-- Защита демо-групп от произвольного ручного текста -->
+            <div
+              id="publish-manual-only"
+              class="hidden rounded-xl border border-slate-200/90 bg-slate-50/90 p-3 text-xs text-slate-700 space-y-2.5 animate-fade-up"
+            >
+              <p class="leading-relaxed">
+                В демо публикуются только посты по готовым примерам — так группы остаются чистыми. Свой текст можно скопировать
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  id="copy-post-manual-btn"
+                  type="button"
+                  class="text-xs font-semibold text-[#1B3A6B] bg-white hover:bg-cyan-50 border border-slate-200 hover:border-cyan-400/60 rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer"
+                >
+                  Скопировать текст поста
+                </button>
+                <button
+                  id="download-cover-manual-btn"
+                  type="button"
+                  class="hidden text-xs font-semibold text-[#1B3A6B] bg-white hover:bg-cyan-50 border border-slate-200 hover:border-cyan-400/60 rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer"
+                >
+                  Скачать обложку
+                </button>
+              </div>
+            </div>
+
+            <!-- Сообщение при превышении лимита демо-публикаций (скрыто до факта превышения) -->
+            <div
+              id="publish-limit-banner"
+              class="hidden mt-3 rounded-xl border border-amber-200 bg-amber-50/90 p-3 text-xs text-amber-950 space-y-2.5 animate-fade-up"
+              role="alert"
+            >
+              <p class="leading-relaxed">
+                Лимит демо: до 3 публикаций, не чаще раза в 5 минут. Текст поста можно скопировать
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  id="copy-post-limit-btn"
+                  type="button"
+                  class="text-xs font-semibold text-[#1B3A6B] bg-white hover:bg-cyan-50 border border-slate-200 hover:border-cyan-400/60 rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer"
+                >
+                  Скопировать текст поста
+                </button>
+                <button
+                  id="download-cover-limit-btn"
+                  type="button"
+                  class="hidden text-xs font-semibold text-[#1B3A6B] bg-white hover:bg-cyan-50 border border-slate-200 hover:border-cyan-400/60 rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer"
+                >
+                  Скачать обложку
+                </button>
+              </div>
+            </div>
+
+            <!-- Честный фолбэк, если прокси не задан или недоступен -->
+            <div
+              id="publish-fallback"
+              class="hidden mt-3 rounded-xl border border-amber-200 bg-amber-50/90 p-3 text-xs text-amber-950 space-y-2.5 animate-fade-up"
+            >
+              <p class="leading-relaxed">
+                Публикация через прокси ещё настраивается. Финальный пост готов — можно скопировать вручную
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  id="copy-post-text-btn"
+                  type="button"
+                  class="text-xs font-semibold text-[#1B3A6B] bg-white hover:bg-cyan-50 border border-slate-200 hover:border-cyan-400/60 rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer"
+                >
+                  Скопировать текст поста
+                </button>
+                <button
+                  id="download-cover-btn"
+                  type="button"
+                  class="hidden text-xs font-semibold text-[#1B3A6B] bg-white hover:bg-cyan-50 border border-slate-200 hover:border-cyan-400/60 rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer"
+                >
+                  Скачать обложку
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- CTA после успешной публикации -->
+          <div
+            id="post-publish-order-cta"
+            class="order-5 lg:order-none hidden shrink-0 stimit-card rounded-2xl p-3.5 animate-fade-up"
+          >
+            <a
+              href="https://stimit.ru"
+              target="_blank"
+              rel="noopener"
+              class="w-full stimit-btn-gradient text-white font-semibold text-xs sm:text-sm rounded-xl px-4 py-2.5 flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-cyan-500"
+            >
+              <span>Заказать такого агента</span>
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+              </svg>
+            </a>
+          </div>
+
+          <!-- Блок «Живые демо-группы» -->
+          <div
+            id="demo-groups-card"
+            class="order-1 lg:order-none shrink-0 stimit-card rounded-2xl p-4"
+          >
+            <h3 class="text-sm font-bold text-slate-900 mb-2.5">
+              Живые демо-группы
+            </h3>
+
+            <ul id="connected-groups-list" class="space-y-1.5">
+              <!-- Группы рендерятся из константы DEMO_GROUPS -->
+            </ul>
+
+            <p class="mt-2.5 text-[11px] leading-snug text-slate-500">
+              Нажмите на группу, чтобы открыть её и увидеть опубликованный пост
+            </p>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <script>
+      const PROXY_URL = '';
+      const DEMO_GROUPS = [
+        { platform: 'tg', url: 'https://t.me/stimit_ai_marketer_demo', label: 'Демо-канал STIMIT' },
+        { platform: 'vk', url: 'https://vk.ru/stimit_ai_marketer_demo', label: 'Демо-группа STIMIT' },
+      ];
+
+      const MAX_CHARS = 500;
+      const REQUEST_TIMEOUT_MS = 90000;
+      const MIN_STAGE_PLAYBACK_MS = 1500;
+
+      const STAGE_TITLES = [
+        'Анализирую аудиторию',
+        'Выбираю формат',
+        'Пишу черновик',
+        'Проверяю себя',
+        'Рисую обложку',
+        'Публикую',
+      ];
+
+      const INITIAL_POSTS = [
+        {
+          id: 'post-1',
+          time: '14:20',
+          views: '1.2K',
+          text: 'Запустили обновлённую витрину STIMIT: собрали 14 рабочих прототипов AI-агентов для маркетинга, продаж и операционки. Каждый можно протестировать вживую прямо в браузере.',
+          hashtags: ['#stimit', '#витрина', '#агенты'],
+        },
+        {
+          id: 'post-2',
+          time: 'вчера',
+          views: '980',
+          text: 'Кейс недели: собрали и запустили кастомный прототип AI-ассистента для отдела B2B-продаж за 3–5 дней. Без долгого ТЗ на 40 страниц — сразу на реальных данных клиента.',
+          hashtags: ['#кейс', '#прототип'],
+        },
+        {
+          id: 'post-3',
+          time: '2 дня назад',
+          views: '1.5K',
+          type: 'poll',
+          text: 'Опрос: какого агента собрать следующим для витрины STIMIT?',
+          pollOptions: [
+            { label: 'Аналитик отзывов и обращений', percent: 46 },
+            { label: 'Ассистент руководителя в Telegram', percent: 34 },
+            { label: 'Скринер входящих резюме', percent: 20 },
+          ],
+          hashtags: ['#опрос'],
+        },
+        {
+          id: 'post-4',
+          time: '4 дня назад',
+          views: '1.1K',
+          text: 'Почему мы работаем по методологии Vibe Coding: вместо месяцев классической разработки бизнес видит рабочий прототип в первую неделю и проверяет гипотезу на живой аудитории.',
+          hashtags: ['#vibecoding', '#методология'],
+        },
+        {
+          id: 'post-5',
+          time: '6 дней назад',
+          views: '870',
+          text: 'Открыта запись на персональное демо платформы STIMIT. Покажем, как адаптировать агентную связку под ваши регламенты и каналы коммуникации.',
+          hashtags: ['#демо', '#stimit'],
+        },
+      ];
+
+      const SUBSCRIBER_QUESTIONS = [
+        {
+          initials: 'АМ',
+          color: 'bg-blue-100 text-[#1B3A6B]',
+          name: 'Алексей',
+          text: 'Сколько стоит такой агент для моего бизнеса?',
+        },
+        {
+          initials: 'ЕК',
+          color: 'bg-emerald-100 text-emerald-800',
+          name: 'Елена',
+          text: 'А агент может вести наш канал целиком?',
+        },
+        {
+          initials: 'ДС',
+          color: 'bg-amber-100 text-amber-800',
+          name: 'Дмитрий',
+          text: 'Чем это лучше обычного чат-бота?',
+        },
+      ];
+
+      const EXAMPLE_TASKS = [
+        'Сделай пост про скидку 20% на аудит процессов',
+        'Напиши короткий кейс: как AI-агент ускорил подготовку контента в 4 раза',
+        'Сделай приглашение на живой разбор бизнес-процессов в четверг',
+      ];
+
+      // DOM elements
+      const feedEl = document.getElementById('telegram-feed');
+      const questionsEl = document.getElementById('subscriber-questions');
+      const taskInput = document.getElementById('task-input');
+      const charCounter = document.getElementById('char-counter');
+      const runBtn = document.getElementById('run-agent-btn');
+      const runBtnSpinner = document.getElementById('run-btn-spinner');
+      const runBtnLabel = document.getElementById('run-btn-label');
+      const feedbackBanner = document.getElementById('feedback-banner');
+      const exampleChipsEl = document.getElementById('example-chips');
+      const taskFormView = document.getElementById('task-form-view');
+      const quotaExceededView = document.getElementById('quota-exceeded-view');
+
+      const totalTimerEl = document.getElementById('total-timer');
+      const pipelinePlaceholder = document.getElementById('pipeline-placeholder');
+      const pipelineStagesEl = document.getElementById('pipeline-stages');
+      const detailsCard = document.getElementById('agent-details-card');
+      const detailsToggle = document.getElementById('agent-details-toggle');
+      const detailsChevron = document.getElementById('agent-details-chevron');
+      const detailsBody = document.getElementById('agent-details-body');
+      const detailsList = document.getElementById('agent-details-list');
+
+      // Демо-группы и публикация
+      const STORAGE_PUB_LIMIT_KEY = 'stimit_demo_pub';
+      const STORAGE_FIRST_VISIT_HINT_KEY = 'stimit_seen_start_hint';
+      const MAX_DEMO_PUBLISHES = 3;
+      const PUBLISH_COOLDOWN_MS = 5 * 60 * 1000;
+
+      const firstVisitBubble = document.getElementById('first-visit-bubble');
+      const connectedGroupsList = document.getElementById('connected-groups-list');
+
+      const publishPanel = document.getElementById('publish-panel');
+      const publishControls = document.getElementById('publish-controls');
+      const publishGroupsList = document.getElementById('publish-groups-list');
+      const publishSelectedBtn = document.getElementById('publish-selected-btn');
+      const publishBtnSpinner = document.getElementById('publish-btn-spinner');
+      const publishBtnLabel = document.getElementById('publish-btn-label');
+      const publishManualOnly = document.getElementById('publish-manual-only');
+      const copyPostManualBtn = document.getElementById('copy-post-manual-btn');
+      const downloadCoverManualBtn = document.getElementById('download-cover-manual-btn');
+      const publishLimitBanner = document.getElementById('publish-limit-banner');
+      const copyPostLimitBtn = document.getElementById('copy-post-limit-btn');
+      const downloadCoverLimitBtn = document.getElementById('download-cover-limit-btn');
+      const publishFallback = document.getElementById('publish-fallback');
+      const copyPostTextBtn = document.getElementById('copy-post-text-btn');
+      const downloadCoverBtn = document.getElementById('download-cover-btn');
+      const postPublishOrderCta = document.getElementById('post-publish-order-cta');
+
+      // State
+      let posts = [...INITIAL_POSTS];
+      let isRunning = false;
+      let isPublishing = false;
+      let publishLimitExceeded = false;
+      let timerInterval = null;
+      let runStartedAt = 0;
+      let lastFailedTask = '';
+      let latestGeneratedPost = null;
+      const demoGroups = DEMO_GROUPS.map((g, idx) => ({
+        id: `demo-group-${idx}`,
+        platform: g.platform,
+        name: g.label,
+        target: g.url,
+      }));
+      let publishStatusByGroupId = {};
+      let stageState = STAGE_TITLES.map((title) => ({
+        title,
+        status: 'waiting', // 'waiting' | 'active' | 'done'
+        note: '',
+        durationSec: null,
+      }));
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function renderPosts(highlightNewest = false) {
+        feedEl.innerHTML = posts
+          .map((post, idx) => {
+            const isFresh = highlightNewest && idx === 0 && post.isAgentGenerated;
+            const tagsHtml =
+              Array.isArray(post.hashtags) && post.hashtags.length
+                ? `<div class="mt-2 text-xs font-medium text-[#244B8A] flex flex-wrap gap-x-2 gap-y-1">${post.hashtags
+                    .map((tag) => `<span>${escapeHtml(tag)}</span>`)
+                    .join('')}</div>`
+                : '';
+
+            const pollHtml =
+              post.type === 'poll' && Array.isArray(post.pollOptions)
+                ? `<div class="mt-2.5 space-y-1.5">
+                    ${post.pollOptions
+                      .map(
+                        (opt) => `
+                        <div class="relative overflow-hidden rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs">
+                          <div class="absolute inset-y-0 left-0 bg-[#1B3A6B]/12" style="width: ${opt.percent}%"></div>
+                          <div class="relative flex items-center justify-between gap-2">
+                            <span class="text-slate-800 font-medium">${escapeHtml(opt.label)}</span>
+                            <span class="text-[#1B3A6B] font-bold tabular-nums shrink-0">${opt.percent}%</span>
+                          </div>
+                        </div>`
+                      )
+                      .join('')}
+                  </div>`
+                : '';
+
+            const freshBadge = post.isAgentGenerated
+              ? `<div class="mb-1.5 text-[11px] font-semibold text-emerald-700 flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  <span>только что · создано агентом</span>
+                </div>`
+              : '';
+
+            const imageSrc =
+              typeof post.image_base64 === 'string' && post.image_base64.trim()
+                ? post.image_base64.trim().startsWith('data:')
+                  ? post.image_base64.trim()
+                  : `data:image/png;base64,${post.image_base64.trim()}`
+                : '';
+
+            const imageHtml = imageSrc
+              ? `<img src="${escapeHtml(
+                  imageSrc
+                )}" alt="Обложка поста" class="w-full rounded-lg object-cover mb-2.5 border border-slate-200/70" />`
+              : '';
+
+            return `
+              <article class="bg-white rounded-xl rounded-tl-sm p-3.5 shadow-sm border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-cyan-400/55 ${
+                post.isAgentGenerated
+                  ? 'border-cyan-500/40 ring-1 ring-cyan-500/15'
+                  : 'border-slate-200/70'
+              } ${isFresh ? 'animate-post-in' : ''}">
+                ${freshBadge}
+                ${imageHtml}
+                <p class="text-[13px] leading-relaxed text-slate-800 whitespace-pre-line">${escapeHtml(
+                  post.text
+                )}</p>
+                ${pollHtml}
+                ${tagsHtml}
+                <div class="mt-2 flex items-center justify-end gap-2 text-[11px] text-slate-400 tabular-nums">
+                  ${post.views ? `<span>${escapeHtml(post.views)} просмотров</span><span>·</span>` : ''}
+                  <span>${escapeHtml(post.time)}</span>
+                </div>
+              </article>
+            `;
+          })
+          .join('');
+
+        if (highlightNewest) {
+          feedEl.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+
+      function renderSubscriberQuestions() {
+        questionsEl.innerHTML = SUBSCRIBER_QUESTIONS.map(
+          (q, index) => `
+          <div class="rounded-xl border border-slate-200/80 bg-slate-50/80 p-2.5 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white hover:border-cyan-400/55 hover:shadow-md">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div class="flex items-start gap-2.5 min-w-0">
+                <div class="w-7 h-7 rounded-full ${q.color} text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                  ${escapeHtml(q.initials)}
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-xs font-bold text-slate-900">${escapeHtml(q.name)}</div>
+                  <p class="text-xs text-slate-600 mt-0.5 leading-snug">«${escapeHtml(q.text)}»</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                data-question-index="${index}"
+                class="assign-question-btn self-end sm:self-center shrink-0 text-xs font-semibold text-[#1B3A6B] hover:text-cyan-700 bg-white hover:bg-cyan-50/70 border border-slate-200 hover:border-cyan-400/60 rounded-lg px-2.5 py-1.5 transition-all duration-150 cursor-pointer whitespace-nowrap"
+              >
+                Поручить агенту
+              </button>
+            </div>
+          </div>
+        `
+        ).join('');
+
+        questionsEl.querySelectorAll('.assign-question-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            if (isRunning) return;
+            const idx = Number(btn.getAttribute('data-question-index'));
+            const q = SUBSCRIBER_QUESTIONS[idx];
+            if (!q) return;
+            const promptText = `Ответь подписчику ${q.name}: «${q.text}»`;
+            setTaskText(promptText);
+            taskInput.focus();
+          });
+        });
+      }
+
+      function renderExampleChips() {
+        exampleChipsEl.innerHTML = EXAMPLE_TASKS.map(
+          (text, idx) => `
+          <button
+            type="button"
+            data-chip-index="${idx}"
+            class="example-chip-btn text-left text-xs font-medium text-slate-700 hover:text-[#1B3A6B] bg-slate-100/90 hover:bg-cyan-50/80 border border-slate-200/80 hover:border-cyan-400/60 rounded-lg px-3 py-2 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm cursor-pointer"
+          >
+            ${escapeHtml(text)}
+          </button>
+        `
+        ).join('');
+
+        exampleChipsEl.querySelectorAll('.example-chip-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            if (isRunning) return;
+            const idx = Number(btn.getAttribute('data-chip-index'));
+            if (EXAMPLE_TASKS[idx]) {
+              setTaskText(EXAMPLE_TASKS[idx]);
+              taskInput.focus();
+            }
+          });
+        });
+      }
+
+      function renderPipeline() {
+        pipelineStagesEl.innerHTML = stageState
+          .map((stage, idx) => {
+            let iconHtml = '';
+            let containerClasses =
+              'border-slate-200/90 bg-white/95 text-slate-500 hover:border-cyan-400/55 hover:bg-white';
+            let titleClasses = 'text-slate-600 font-medium';
+
+            if (stage.status === 'active') {
+              containerClasses =
+                'border-cyan-400 bg-gradient-to-r from-blue-50/95 via-white to-cyan-50/90 text-slate-900 stage-active-glow';
+              titleClasses = 'text-[#1B3A6B] font-bold';
+              iconHtml = `
+                <span class="w-6 h-6 rounded-full bg-cyan-500/15 text-cyan-600 ring-2 ring-cyan-400/60 flex items-center justify-center shrink-0">
+                  <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                    <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"></path>
+                  </svg>
+                </span>`;
+            } else if (stage.status === 'done') {
+              containerClasses =
+                'border-emerald-300/80 bg-emerald-50/85 text-slate-900 hover:border-emerald-400';
+              titleClasses = 'text-slate-900 font-semibold';
+              iconHtml = `
+                <span class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 ring-1 ring-emerald-400/50 flex items-center justify-center shrink-0">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </span>`;
+            } else {
+              iconHtml = `
+                <span class="w-6 h-6 rounded-full bg-slate-100 text-[#1B3A6B] border border-cyan-500/35 text-xs font-bold flex items-center justify-center shrink-0 tabular-nums shadow-sm">
+                  ${idx + 1}
+                </span>`;
+            }
+
+            const timeBadge =
+              stage.status === 'done' && stage.durationSec !== null
+                ? `<span class="text-[11px] font-semibold tabular-nums text-emerald-700 shrink-0">${stage.durationSec.toFixed(
+                    1
+                  )} сек</span>`
+                : '';
+
+            const showNote = stage.status === 'active' && Boolean(stage.note);
+
+            return `
+              <li class="relative z-10 rounded-xl border px-3.5 py-2.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm ${containerClasses}">
+                <div class="flex items-center justify-between gap-2.5">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    ${iconHtml}
+                    <span class="text-sm truncate ${titleClasses}">${escapeHtml(
+              stage.title
+            )}</span>
+                  </div>
+                  ${timeBadge}
+                </div>
+                <div class="accordion-content ${showNote ? 'is-open' : ''}">
+                  <div class="accordion-inner">
+                    <p class="mt-2 pl-9 text-xs leading-relaxed text-slate-700">
+                      ${escapeHtml(stage.note || '')}
+                    </p>
+                  </div>
+                </div>
+              </li>
+            `;
+          })
+          .join('');
+      }
+
+      function renderAgentDetails(stages) {
+        detailsList.innerHTML = stages
+          .map(
+            (st, idx) => `
+            <li class="text-xs leading-relaxed">
+              <div class="font-bold text-slate-800">${idx + 1}. ${escapeHtml(
+              st.title
+            )}</div>
+              <p class="text-slate-600 mt-0.5">${escapeHtml(st.note || '—')}</p>
+            </li>
+          `
+          )
+          .join('');
+        detailsCard.classList.remove('hidden');
+      }
+
+      function setTaskText(value) {
+        taskInput.value = value;
+        hideFeedback();
+        hideFirstVisitBubble();
+        updateCounterAndButton();
+      }
+
+      function updateCounterAndButton() {
+        const len = taskInput.value.length;
+        charCounter.textContent = `${len}/${MAX_CHARS}`;
+
+        const isOver = len > MAX_CHARS;
+        if (isOver) {
+          charCounter.classList.remove('text-slate-500');
+          charCounter.classList.add('text-red-600');
+        } else {
+          charCounter.classList.remove('text-red-600');
+          charCounter.classList.add('text-slate-500');
+        }
+
+        runBtn.disabled = isRunning || isOver;
+      }
+
+      function showFeedback(type, message, withRetry = false) {
+        feedbackBanner.className = 'rounded-xl px-3.5 py-2.5 text-sm animate-fade-up';
+        if (type === 'info') {
+          feedbackBanner.classList.add(
+            'bg-blue-50',
+            'text-[#1B3A6B]',
+            'border',
+            'border-blue-200/80'
+          );
+        } else if (type === 'warning') {
+          feedbackBanner.classList.add(
+            'bg-amber-50',
+            'text-amber-900',
+            'border',
+            'border-amber-200'
+          );
+        } else {
+          feedbackBanner.classList.add(
+            'bg-red-50',
+            'text-red-800',
+            'border',
+            'border-red-200'
+          );
+        }
+
+        if (withRetry) {
+          feedbackBanner.innerHTML = `
+            <div class="flex items-center justify-between gap-3">
+              <span>${escapeHtml(message)}</span>
+              <button
+                type="button"
+                id="retry-btn"
+                class="shrink-0 text-xs font-bold text-red-900 bg-white hover:bg-red-100/70 border border-red-200 rounded-lg px-3 py-1.5 transition-colors cursor-pointer"
+              >
+                Повторить
+              </button>
+            </div>
+          `;
+          const retryBtn = document.getElementById('retry-btn');
+          if (retryBtn) {
+            retryBtn.addEventListener('click', () => {
+              if (lastFailedTask) {
+                executeAgent(lastFailedTask);
+              }
+            });
+          }
+        } else {
+          feedbackBanner.textContent = message;
+        }
+        feedbackBanner.classList.remove('hidden');
+      }
+
+      function hideFeedback() {
+        feedbackBanner.classList.add('hidden');
+        feedbackBanner.innerHTML = '';
+      }
+
+      function setRunningState(running) {
+        isRunning = running;
+        taskInput.disabled = running;
+        if (running) {
+          runBtnSpinner.classList.remove('hidden');
+          runBtnLabel.textContent = 'Агент работает…';
+        } else {
+          runBtnSpinner.classList.add('hidden');
+          runBtnLabel.textContent = 'Запустить агента';
+        }
+        updateCounterAndButton();
+      }
+
+      function startTimer() {
+        stopTimer();
+        runStartedAt = Date.now();
+        totalTimerEl.textContent = 'Прошло: 0 сек';
+        timerInterval = setInterval(() => {
+          const sec = Math.floor((Date.now() - runStartedAt) / 1000);
+          totalTimerEl.textContent = `Прошло: ${sec} сек`;
+        }, 250);
+      }
+
+      function stopTimer() {
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+        if (runStartedAt > 0) {
+          const finalSec = Math.max(
+            1,
+            Math.round((Date.now() - runStartedAt) / 1000)
+          );
+          totalTimerEl.textContent = `Прошло: ${finalSec} сек`;
+        }
+      }
+
+      function resetPipeline(keepPlaceholder = false) {
+        stageState = STAGE_TITLES.map((title) => ({
+          title,
+          status: 'waiting',
+          note: '',
+          durationSec: null,
+        }));
+        if (keepPlaceholder) {
+          pipelinePlaceholder.classList.remove('hidden');
+        } else {
+          pipelinePlaceholder.classList.add('hidden');
+        }
+        detailsCard.classList.add('hidden');
+        detailsBody.classList.remove('is-open');
+        detailsToggle.setAttribute('aria-expanded', 'false');
+        detailsChevron.style.transform = 'rotate(0deg)';
+        renderPipeline();
+      }
+
+      function sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      async function playStagesSequentially(serverStages) {
+        const normalizedStages = STAGE_TITLES.map((defaultTitle, idx) => {
+          const found = serverStages[idx] || {};
+          return {
+            title: found.title || defaultTitle,
+            note: found.note || '',
+          };
+        });
+
+        for (let i = 0; i < normalizedStages.length; i++) {
+          const stepStart = performance.now();
+          stageState[i].title = normalizedStages[i].title;
+          stageState[i].note = normalizedStages[i].note;
+          stageState[i].status = 'active';
+          renderPipeline();
+
+          await sleep(MIN_STAGE_PLAYBACK_MS);
+
+          const elapsedSec = (performance.now() - stepStart) / 1000;
+          stageState[i].status = 'done';
+          stageState[i].durationSec = elapsedSec;
+          renderPipeline();
+        }
+
+        return normalizedStages;
+      }
+
+      async function executeAgent(taskText) {
+        hideFeedback();
+
+        lastFailedTask = taskText;
+        const isFromExample = EXAMPLE_TASKS.some(
+          (example) => example.trim() === String(taskText || '').trim()
+        );
+        postPublishOrderCta.classList.add('hidden');
+        setRunningState(true);
+        resetPipeline(false);
+        startTimer();
+
+        // Показываем первый этап активным во время ожидания ответа сервера
+        stageState[0].status = 'active';
+        renderPipeline();
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+        try {
+          const response = await fetch(`${getEffectiveProxyBaseUrl()}/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ task: taskText }),
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+
+          if (response.status === 429) {
+            stopTimer();
+            resetPipeline(true);
+            totalTimerEl.textContent = 'Прошло: 0 сек';
+            taskFormView.classList.add('hidden');
+            quotaExceededView.classList.remove('hidden');
+            setRunningState(false);
+            return;
+          }
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
+          if (!data || typeof data.text !== 'string' || !data.text.trim()) {
+            throw new Error('Invalid payload');
+          }
+
+          // Адаптируем ответ /generate ({ text, imageUrl }) под внутренний формат конвейера
+          data.stages = STAGE_TITLES.map((title) => ({ title, note: '' }));
+          data.post = { text: data.text, hashtags: [], image_base64: null };
+
+          // Сбрасываем первый этап перед последовательным проигрыванием заметок
+          stageState[0].status = 'waiting';
+          renderPipeline();
+
+          const playedStages = await playStagesSequentially(data.stages);
+          stopTimer();
+
+          // Добавляем новый пост в верх ленты Telegram
+          const newPost = {
+            id: `agent-${Date.now()}`,
+            time: 'только что',
+            views: '1',
+            text: data.post.text,
+            hashtags: Array.isArray(data.post.hashtags) ? data.post.hashtags : [],
+            image_base64:
+              typeof data.post.image_base64 === 'string' &&
+              data.post.image_base64.trim()
+                ? data.post.image_base64.trim()
+                : null,
+            isAgentGenerated: true,
+            isFromExample,
+          };
+          posts = [newPost, ...posts];
+          renderPosts(true);
+
+          // Показываем раскрывающийся блок «Подробнее: как думал агент»
+          renderAgentDetails(playedStages);
+
+          // Показываем панель «Куда опубликовать» для только что сгенерированного поста
+          latestGeneratedPost = newPost;
+          publishStatusByGroupId = {};
+          publishLimitExceeded = false;
+          publishLimitBanner.classList.add('hidden');
+          publishFallback.classList.add('hidden');
+          renderPublishPanel();
+        } catch (err) {
+          clearTimeout(timeoutId);
+          stopTimer();
+          resetPipeline(true);
+          totalTimerEl.textContent = 'Прошло: 0 сек';
+          showFeedback('error', 'Не получилось связаться с агентом', true);
+        } finally {
+          setRunningState(false);
+        }
+      }
+
+      // --- Демо-группы, лимит и публикация ---
+      function getEffectiveProxyBaseUrl() {
+        return String(PROXY_URL || '').trim().replace(/\/+$/, '');
+      }
+
+      function getPublishLimitState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_PUB_LIMIT_KEY);
+          if (!raw) return { count: 0, lastPublishedAt: 0 };
+          const parsed = JSON.parse(raw);
+          return {
+            count: Number(parsed && parsed.count) || 0,
+            lastPublishedAt: Number(parsed && parsed.lastPublishedAt) || 0,
+          };
+        } catch (e) {
+          return { count: 0, lastPublishedAt: 0 };
+        }
+      }
+
+      function recordSuccessfulPublish() {
+        const current = getPublishLimitState();
+        const next = {
+          count: current.count + 1,
+          lastPublishedAt: Date.now(),
+        };
+        try {
+          localStorage.setItem(STORAGE_PUB_LIMIT_KEY, JSON.stringify(next));
+        } catch (e) {}
+      }
+
+      function isPublishRateLimited() {
+        const state = getPublishLimitState();
+        if (state.count >= MAX_DEMO_PUBLISHES) return true;
+        if (
+          state.lastPublishedAt > 0 &&
+          Date.now() - state.lastPublishedAt < PUBLISH_COOLDOWN_MS
+        ) {
+          return true;
+        }
+        return false;
+      }
+
+      function renderPlatformIcon(platform) {
+        if (platform === 'tg') {
+          return `
+            <span class="w-6 h-6 rounded-lg bg-sky-500/15 text-sky-600 border border-sky-400/30 flex items-center justify-center shrink-0" title="Telegram">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M21.94 4.66a1.5 1.5 0 0 0-1.64-.25L3.1 11.46a1.48 1.48 0 0 0 .14 2.77l4.38 1.44 1.69 5.33a1.1 1.1 0 0 0 1.84.42l2.53-2.53 4.31 3.17a1.5 1.5 0 0 0 2.35-.89l2.6-15.17a1.5 1.5 0 0 0-1-1.34ZM9.74 15.17l-.57 3.06-1.08-3.4 9.75-7.17-8.1 7.51Z"/>
+              </svg>
+            </span>
+          `;
+        }
+        return `
+          <span class="w-6 h-6 rounded-lg bg-blue-600/15 text-[#0077FF] border border-blue-400/30 text-[10px] font-extrabold flex items-center justify-center shrink-0" title="ВКонтакте">
+            VK
+          </span>
+        `;
+      }
+
+      function renderConnectedGroups() {
+        connectedGroupsList.innerHTML = demoGroups
+          .map(
+            (g) => `
+            <li>
+              <a
+                href="${escapeHtml(g.target)}"
+                target="_blank"
+                rel="noopener"
+                class="group flex items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-slate-50/70 hover:bg-white hover:border-cyan-400/60 px-2.5 py-2 transition-all"
+              >
+                <span class="flex items-center gap-2 min-w-0">
+                  ${renderPlatformIcon(g.platform)}
+                  <span class="text-xs font-medium text-slate-800 group-hover:text-[#1B3A6B] group-hover:underline underline-offset-2 truncate">${escapeHtml(
+                    g.name
+                  )}</span>
+                </span>
+                <svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#1B3A6B] shrink-0 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                </svg>
+              </a>
+            </li>
+          `
+          )
+          .join('');
+      }
+
+      function buildFullPostText(post) {
+        if (!post) return '';
+        const tags =
+          Array.isArray(post.hashtags) && post.hashtags.length
+            ? `\n\n${post.hashtags.join(' ')}`
+            : '';
+        return `${post.text}${tags}`;
+      }
+
+      function getPostImageDataUrl(post) {
+        if (
+          !post ||
+          typeof post.image_base64 !== 'string' ||
+          !post.image_base64.trim()
+        ) {
+          return null;
+        }
+        const trimmed = post.image_base64.trim();
+        return trimmed.startsWith('data:')
+          ? trimmed
+          : `data:image/png;base64,${trimmed}`;
+      }
+
+      function renderPublishPanel() {
+        if (!latestGeneratedPost) {
+          publishPanel.classList.add('hidden');
+          postPublishOrderCta.classList.add('hidden');
+          return;
+        }
+
+        publishPanel.classList.remove('hidden');
+
+        const imageDataUrl = getPostImageDataUrl(latestGeneratedPost);
+        if (imageDataUrl) {
+          downloadCoverBtn.classList.remove('hidden');
+          downloadCoverLimitBtn.classList.remove('hidden');
+          downloadCoverManualBtn.classList.remove('hidden');
+        } else {
+          downloadCoverBtn.classList.add('hidden');
+          downloadCoverLimitBtn.classList.add('hidden');
+          downloadCoverManualBtn.classList.add('hidden');
+        }
+
+        if (!latestGeneratedPost.isFromExample) {
+          publishControls.classList.add('hidden');
+          publishLimitBanner.classList.add('hidden');
+          publishFallback.classList.add('hidden');
+          publishManualOnly.classList.remove('hidden');
+          return;
+        }
+
+        publishManualOnly.classList.add('hidden');
+        publishControls.classList.remove('hidden');
+
+        publishGroupsList.innerHTML = demoGroups
+          .map((g) => {
+            const st = publishStatusByGroupId[g.id];
+            let statusHtml = '';
+
+            if (st === 'publishing') {
+              statusHtml = `<span class="text-[11px] font-semibold text-[#1B3A6B] shrink-0">Публикуем…</span>`;
+            } else if (st === 'success') {
+              statusHtml = `
+                <span class="inline-flex items-center gap-2 shrink-0">
+                  <span class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-0.5">Опубликовано ✓</span>
+                  <a
+                    href="${escapeHtml(g.target)}"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-[11px] font-semibold text-[#1B3A6B] hover:underline underline-offset-2"
+                  >Открыть</a>
+                </span>
+              `;
+            } else if (st === 'error') {
+              statusHtml = `<span class="text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 rounded-md px-2 py-0.5 shrink-0">Ошибка отправки</span>`;
+            }
+
+            return `
+              <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-slate-50/70 px-2.5 py-2">
+                <span class="flex items-center gap-2 min-w-0">
+                  ${renderPlatformIcon(g.platform)}
+                  <span class="text-xs font-medium text-slate-800 truncate">${escapeHtml(
+                    g.name
+                  )}</span>
+                </span>
+                ${statusHtml}
+              </div>
+            `;
+          })
+          .join('');
+
+        updatePublishButtonState();
+      }
+
+      function updatePublishButtonState() {
+        publishSelectedBtn.disabled =
+          isPublishing || publishLimitExceeded || demoGroups.length === 0;
+      }
+
+      function setPublishingState(publishing) {
+        isPublishing = publishing;
+        if (publishing) {
+          publishBtnSpinner.classList.remove('hidden');
+          publishBtnLabel.textContent = 'Публикуем…';
+        } else {
+          publishBtnSpinner.classList.add('hidden');
+          publishBtnLabel.textContent = 'Опубликовать в демо-группы';
+        }
+        updatePublishButtonState();
+      }
+
+      async function publishToSelectedGroups() {
+        if (
+          isPublishing ||
+          !latestGeneratedPost ||
+          !latestGeneratedPost.isFromExample ||
+          demoGroups.length === 0
+        ) {
+          return;
+        }
+
+        publishFallback.classList.add('hidden');
+        publishLimitBanner.classList.add('hidden');
+
+        if (isPublishRateLimited()) {
+          publishLimitExceeded = true;
+          publishLimitBanner.classList.remove('hidden');
+          updatePublishButtonState();
+          return;
+        }
+
+        const proxyBase = getEffectiveProxyBaseUrl();
+        if (!proxyBase || proxyBase.includes('ЗАМЕНИТЬ_ПРИ_НАСТРОЙКЕ')) {
+          demoGroups.forEach((g) => {
+            publishStatusByGroupId[g.id] = 'error';
+          });
+          renderPublishPanel();
+          publishFallback.classList.remove('hidden');
+          return;
+        }
+
+        setPublishingState(true);
+        demoGroups.forEach((g) => {
+          publishStatusByGroupId[g.id] = 'publishing';
+        });
+        renderPublishPanel();
+
+        const text = buildFullPostText(latestGeneratedPost);
+        const imageUrl = getPostImageDataUrl(latestGeneratedPost);
+        let anySucceeded = false;
+        let anyFailed = false;
+
+        await Promise.all(
+          demoGroups.map(async (group) => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            try {
+              const resp = await fetch(`${proxyBase}/publish`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  platform: group.platform,
+                  target: group.target,
+                  text,
+                  imageUrl,
+                }),
+                signal: controller.signal,
+              });
+              clearTimeout(timeoutId);
+
+              if (!resp.ok) {
+                publishStatusByGroupId[group.id] = 'error';
+                anyFailed = true;
+              } else {
+                publishStatusByGroupId[group.id] = 'success';
+                anySucceeded = true;
+              }
+            } catch (e) {
+              clearTimeout(timeoutId);
+              publishStatusByGroupId[group.id] = 'error';
+              anyFailed = true;
+            }
+            renderPublishPanel();
+          })
+        );
+
+        if (anySucceeded) {
+          recordSuccessfulPublish();
+          postPublishOrderCta.classList.remove('hidden');
+        }
+
+        setPublishingState(false);
+        renderPublishPanel();
+
+        if (anyFailed) {
+          publishFallback.classList.remove('hidden');
+        }
+      }
+
+      async function copyGeneratedPostText(buttonEl) {
+        if (!latestGeneratedPost) return;
+        const text = buildFullPostText(latestGeneratedPost);
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+          } else {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+          }
+          buttonEl.textContent = 'Текст скопирован ✓';
+          setTimeout(() => {
+            buttonEl.textContent = 'Скопировать текст поста';
+          }, 2000);
+        } catch (e) {}
+      }
+
+      function downloadGeneratedCover() {
+        const imageDataUrl = getPostImageDataUrl(latestGeneratedPost);
+        if (!imageDataUrl) return;
+        const link = document.createElement('a');
+        link.href = imageDataUrl;
+        link.download = 'stimit-post-cover.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      function initFirstVisitBubble() {
+        try {
+          if (!localStorage.getItem(STORAGE_FIRST_VISIT_HINT_KEY)) {
+            firstVisitBubble.classList.remove('hidden');
+            localStorage.setItem(STORAGE_FIRST_VISIT_HINT_KEY, '1');
+          }
+        } catch (e) {}
+      }
+
+      function hideFirstVisitBubble() {
+        if (firstVisitBubble && !firstVisitBubble.classList.contains('hidden')) {
+          firstVisitBubble.classList.add('hidden');
+        }
+      }
+
+      // Event Listeners
+      taskInput.addEventListener('input', () => {
+        hideFeedback();
+        hideFirstVisitBubble();
+        updateCounterAndButton();
+      });
+
+      runBtn.addEventListener('click', () => {
+        if (isRunning) return;
+        hideFirstVisitBubble();
+        const text = taskInput.value.trim();
+
+        if (!text) {
+          showFeedback(
+            'info',
+            'Напишите задачу для агента или выберите один из примеров ниже.'
+          );
+          taskInput.focus();
+          return;
+        }
+
+        if (taskInput.value.length > MAX_CHARS) {
+          return;
+        }
+
+        executeAgent(text);
+      });
+
+      detailsToggle.addEventListener('click', () => {
+        const isOpen = detailsBody.classList.toggle('is-open');
+        detailsToggle.setAttribute('aria-expanded', String(isOpen));
+        detailsChevron.style.transform = isOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+      });
+
+      publishSelectedBtn.addEventListener('click', publishToSelectedGroups);
+      copyPostTextBtn.addEventListener('click', () => copyGeneratedPostText(copyPostTextBtn));
+      copyPostLimitBtn.addEventListener('click', () => copyGeneratedPostText(copyPostLimitBtn));
+      copyPostManualBtn.addEventListener('click', () => copyGeneratedPostText(copyPostManualBtn));
+      downloadCoverBtn.addEventListener('click', downloadGeneratedCover);
+      downloadCoverLimitBtn.addEventListener('click', downloadGeneratedCover);
+      downloadCoverManualBtn.addEventListener('click', downloadGeneratedCover);
+
+      // Init
+      renderPosts(false);
+      renderSubscriberQuestions();
+      renderExampleChips();
+      renderPipeline();
+      renderConnectedGroups();
+      updateCounterAndButton();
+      initFirstVisitBubble();
+    </script>
+  </body>
+</html>
