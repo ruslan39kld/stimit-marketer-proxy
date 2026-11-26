@@ -715,7 +715,7 @@
               class="hidden mt-3 rounded-xl border border-amber-200 bg-amber-50/90 p-3 text-xs text-amber-950 space-y-2.5 animate-fade-up"
             >
               <p class="leading-relaxed">
-                Публикация через прокси ещё настраивается. Финальный пост готов — можно скопировать вручную
+                Если публикация не удалась, скопируй текст поста вручную
               </p>
               <div class="flex flex-wrap gap-2">
                 <button
@@ -1654,14 +1654,6 @@
         }
 
         const proxyBase = getEffectiveProxyBaseUrl();
-        if (!proxyBase || proxyBase.includes('ЗАМЕНИТЬ_ПРИ_НАСТРОЙКЕ')) {
-          demoGroups.forEach((g) => {
-            publishStatusByGroupId[g.id] = 'error';
-          });
-          renderPublishPanel();
-          publishFallback.classList.remove('hidden');
-          return;
-        }
 
         setPublishingState(true);
         demoGroups.forEach((g) => {
