@@ -105,11 +105,13 @@ async function vkCall(method, params) {
   const qs = new URLSearchParams({
     ...params,
     v: VK_API_VERSION,
-  }).toString() + '&access_token=' + token;
-  const r = await fetch(`${VK_API}/${method}?${qs}`);
+  }).toString();
+  const r = await fetch(`${VK_API}/${method}?${qs}`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
   const data = await r.json();
   if (data.error) {
-    console.log(`publish VK ERROR: ${data.error.error_msg || 'unknown'} (code ${data.error.error_code}) token len=${token.length} head=${token.slice(0, 8)}`);
+    console.log(`publish VK ERROR ${method}: code=${data.error.error_code} ${data.error.error_msg || 'unknown'} token len=${token.length} head=${token.slice(0, 8)}`);
     throw new Error(`vk_api_error_${data.error.error_code}`);
   }
   console.log(`publish VK OK: ${method}`);
@@ -348,7 +350,9 @@ async function vkSelfTest() {
     return;
   }
   try {
-    const r = await fetch(`${VK_API}/groups.getById?group_id=243694741&v=${VK_API_VERSION}&access_token=${token}`);
+    const r = await fetch(`${VK_API}/groups.getById?group_id=243694741&v=${VK_API_VERSION}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
     const data = await r.json();
     if (data.error) {
       console.log(`vk selftest: ERROR code=${data.error.error_code} ${data.error.error_msg || 'unknown'}`);
