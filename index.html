@@ -691,6 +691,7 @@
               <p class="leading-relaxed">
                 Лимит демо: до 3 публикаций, не чаще раза в 5 минут. Текст поста можно скопировать
               </p>
+              <p id="publish-limit-countdown" class="font-semibold tabular-nums"></p>
               <div class="flex flex-wrap gap-2">
                 <button
                   id="copy-post-limit-btn"
@@ -907,6 +908,7 @@
       const copyPostManualBtn = document.getElementById('copy-post-manual-btn');
       const downloadCoverManualBtn = document.getElementById('download-cover-manual-btn');
       const publishLimitBanner = document.getElementById('publish-limit-banner');
+      const publishLimitCountdown = document.getElementById('publish-limit-countdown');
       const copyPostLimitBtn = document.getElementById('copy-post-limit-btn');
       const downloadCoverLimitBtn = document.getElementById('download-cover-limit-btn');
       const publishFallback = document.getElementById('publish-fallback');
@@ -919,6 +921,7 @@
       let isRunning = false;
       let isPublishing = false;
       let publishLimitExceeded = false;
+      let publishLimitTimer = null;
       let timerInterval = null;
       let runStartedAt = 0;
       let lastFailedTask = '';
@@ -1422,6 +1425,8 @@
           latestGeneratedPost = newPost;
           publishStatusByGroupId = {};
           publishLimitExceeded = false;
+          stopPublishLimitTimer();
+          publishLimitCountdown.textContent = '';
           publishLimitBanner.classList.add('hidden');
           publishFallback.classList.add('hidden');
           renderPublishPanel();
@@ -1441,41 +1446,70 @@
         return String(PROXY_URL || '').trim().replace(/\/+$/, '');
       }
 
-      function getPublishLimitState() {
+      function getPublishTimestamps() {
+        const now = Date.now();
+        let timestamps = [];
         try {
           const raw = localStorage.getItem(STORAGE_PUB_LIMIT_KEY);
-          if (!raw) return { count: 0, lastPublishedAt: 0 };
-          const parsed = JSON.parse(raw);
-          return {
-            count: Number(parsed && parsed.count) || 0,
-            lastPublishedAt: Number(parsed && parsed.lastPublishedAt) || 0,
-          };
-        } catch (e) {
-          return { count: 0, lastPublishedAt: 0 };
-        }
+          const parsed = raw ? JSON.parse(raw) : [];
+          if (Array.isArray(parsed)) {
+            timestamps = parsed
+              .map((ts) => Number(ts))
+              .filter((ts) => Number.isFinite(ts) && ts > 0);
+          }
+        } catch (e) {}
+        timestamps = timestamps.filter((ts) => now - ts < PUBLISH_COOLDOWN_MS);
+        try {
+          localStorage.setItem(STORAGE_PUB_LIMIT_KEY, JSON.stringify(timestamps));
+        } catch (e) {}
+        return timestamps;
       }
 
       function recordSuccessfulPublish() {
-        const current = getPublishLimitState();
-        const next = {
-          count: current.count + 1,
-          lastPublishedAt: Date.now(),
-        };
+        const timestamps = getPublishTimestamps();
+        timestamps.push(Date.now());
         try {
-          localStorage.setItem(STORAGE_PUB_LIMIT_KEY, JSON.stringify(next));
+          localStorage.setItem(STORAGE_PUB_LIMIT_KEY, JSON.stringify(timestamps));
         } catch (e) {}
       }
 
+      function getPublishRetryAfterSec() {
+        const timestamps = getPublishTimestamps();
+        if (timestamps.length < MAX_DEMO_PUBLISHES) return 0;
+        const oldest = Math.min(...timestamps);
+        return Math.max(
+          1,
+          Math.ceil((oldest + PUBLISH_COOLDOWN_MS - Date.now()) / 1000)
+        );
+      }
+
       function isPublishRateLimited() {
-        const state = getPublishLimitState();
-        if (state.count >= MAX_DEMO_PUBLISHES) return true;
-        if (
-          state.lastPublishedAt > 0 &&
-          Date.now() - state.lastPublishedAt < PUBLISH_COOLDOWN_MS
-        ) {
-          return true;
+        return getPublishRetryAfterSec() > 0;
+      }
+
+      function stopPublishLimitTimer() {
+        if (publishLimitTimer) {
+          clearInterval(publishLimitTimer);
+          publishLimitTimer = null;
         }
-        return false;
+      }
+
+      function startPublishLimitTimer() {
+        stopPublishLimitTimer();
+        const tick = () => {
+          const sec = getPublishRetryAfterSec();
+          if (sec <= 0) {
+            stopPublishLimitTimer();
+            publishLimitExceeded = false;
+            publishLimitBanner.classList.add('hidden');
+            publishLimitCountdown.textContent = '';
+            updatePublishButtonState();
+            return;
+          }
+          publishLimitCountdown.textContent = `Лимит: повторите через ${sec} сек`;
+        };
+        tick();
+        publishLimitTimer = setInterval(tick, 1000);
       }
 
       function renderPlatformIcon(platform) {
@@ -1650,6 +1684,7 @@
           publishLimitExceeded = true;
           publishLimitBanner.classList.remove('hidden');
           updatePublishButtonState();
+          startPublishLimitTimer();
           return;
         }
 
