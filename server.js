@@ -102,15 +102,11 @@ function tokenDesc(token) {
 async function vkCall(method, params) {
   const token = process.env.VK_ACCESS_TOKEN;
   if (!token) throw new Error('vk_not_configured');
-  const body = new URLSearchParams({
+  const qs = new URLSearchParams({
     ...params,
     v: VK_API_VERSION,
   }).toString() + '&access_token=' + token;
-  const r = await fetch(`${VK_API}/${method}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
-  });
+  const r = await fetch(`${VK_API}/${method}?${qs}`);
   const data = await r.json();
   if (data.error) {
     console.log(`publish VK ERROR: ${data.error.error_msg || 'unknown'} (code ${data.error.error_code}) token len=${token.length} head=${token.slice(0, 8)}`);
@@ -342,4 +338,25 @@ app.listen(port, () => {
   console.log(`proxy listening on ${port}`);
   console.log(`vk token: ${tokenDesc(process.env.VK_ACCESS_TOKEN)}`);
   console.log(`tg token: ${tokenDesc(process.env.TELEGRAM_BOT_TOKEN)}`);
+  vkSelfTest();
 });
+
+async function vkSelfTest() {
+  const token = process.env.VK_ACCESS_TOKEN;
+  if (!token) {
+    console.log('vk selftest: ERROR token_not_set');
+    return;
+  }
+  try {
+    const r = await fetch(`${VK_API}/groups.getById?group_id=243694741&v=${VK_API_VERSION}&access_token=${token}`);
+    const data = await r.json();
+    if (data.error) {
+      console.log(`vk selftest: ERROR code=${data.error.error_code} ${data.error.error_msg || 'unknown'}`);
+    } else {
+      const name = data.response?.groups?.[0]?.name || data.response?.[0]?.name || 'unknown';
+      console.log(`vk selftest: OK ${name}`);
+    }
+  } catch (e) {
+    console.log(`vk selftest: ERROR ${e.message}`);
+  }
+}
