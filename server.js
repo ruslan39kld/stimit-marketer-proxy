@@ -479,6 +479,36 @@ function autoRateLimited(ip) {
   return false;
 }
 
+async function generateAutoPost() {
+  let base;
+  try {
+    base = fs.readFileSync(KB_FILE, 'utf8');
+  } catch (e) {
+    throw Object.assign(new Error('no_base'), { code: 'no_base' });
+  }
+
+  const topics = parseTopics(base);
+  if (!topics.length) {
+    throw Object.assign(new Error('no_base'), { code: 'no_base' });
+  }
+
+  const state = loadAutoState();
+  const topic = topics[state.topicIndex % topics.length];
+
+  const systemPrompt = [
+    'Ты — SMM-агент студии STIMIT. Ниже — база знаний студии.',
+    '',
+    base,
+    '',
+    `Тема поста: ${topic}`,
+    '',
+    'Напиши пост по этой теме, строго соблюдая правила из разделов ТОН И СТИЛЬ и ЗАПРЕТЫ базы знаний.',
+  ].join('\n');
+  const text = await generateWithGigachat(topic, systemPrompt);
+  saveAutoState({ topicIndex: (state.topicIndex + 1) % topics.length });
+  return { topic, text };
+}
+
 app.post('/generate-auto', async (req, res) => {
   if (!process.env.GIGACHAT_CREDENTIALS) {
     return res.status(500).json({ ok: false, error: 'gigachat_not_configured' });
@@ -490,42 +520,100 @@ app.post('/generate-auto', async (req, res) => {
     return res.status(429).json({ ok: false, error: 'rate_limited' });
   }
 
-  let base;
   try {
-    base = fs.readFileSync(KB_FILE, 'utf8');
-  } catch (e) {
-    console.log('knowledge base missing');
-    return res.status(503).json({ error: 'no_base' });
-  }
-
-  const topics = parseTopics(base);
-  if (!topics.length) {
-    console.log('knowledge base missing');
-    return res.status(503).json({ error: 'no_base' });
-  }
-
-  const state = loadAutoState();
-  const topic = topics[state.topicIndex % topics.length];
-
-  try {
-    const systemPrompt = [
-      'Ты — SMM-агент студии STIMIT. Ниже — база знаний студии.',
-      '',
-      base,
-      '',
-      `Тема поста: ${topic}`,
-      '',
-      'Напиши пост по этой теме, строго соблюдая правила из разделов ТОН И СТИЛЬ и ЗАПРЕТЫ базы знаний.',
-    ].join('\n');
-    const text = await generateWithGigachat(topic, systemPrompt);
-    saveAutoState({ topicIndex: (state.topicIndex + 1) % topics.length });
+    const { topic, text } = await generateAutoPost();
     console.log(`auto generate: topic=${topic} status=ok`);
     res.json({ ok: true, topic, text });
   } catch (e) {
-    console.log(`auto generate failed: topic=${topic} status=error reason=${e.message}`);
+    if (e.code === 'no_base') {
+      console.log('knowledge base missing');
+      return res.status(503).json({ error: 'no_base' });
+    }
+    console.log(`auto generate failed: status=error reason=${e.message}`);
     res.status(500).json({ ok: false, error: 'generation_failed', reason: e.message });
   }
 });
+
+// --- Автопилот: генерация и публикация по расписанию ---
+const AUTOPILOT_FILE = '/data/autopilot.json';
+const AUTOPILOT_STATE_FILE = '/data/autopilot_state.json';
+const AUTOPILOT_DEFAULT = { enabled: false, time: '10:00', days: [1, 2, 3, 4, 5], channels: ['tg', 'vk'] };
+
+function ensureAutopilotConfig() {
+  try {
+    if (!fs.existsSync(AUTOPILOT_FILE)) {
+      fs.mkdirSync(path.dirname(AUTOPILOT_FILE), { recursive: true });
+      fs.writeFileSync(AUTOPILOT_FILE, JSON.stringify(AUTOPILOT_DEFAULT, null, 2));
+    }
+  } catch (e) {
+    console.log(`autopilot ERROR config create: ${e.message}`);
+  }
+}
+
+function loadAutopilotConfig() {
+  try {
+    return { ...AUTOPILOT_DEFAULT, ...JSON.parse(fs.readFileSync(AUTOPILOT_FILE, 'utf8')) };
+  } catch (e) {
+    return { ...AUTOPILOT_DEFAULT };
+  }
+}
+
+function autopilotLastRun() {
+  try {
+    return JSON.parse(fs.readFileSync(AUTOPILOT_STATE_FILE, 'utf8')).lastRun || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveAutopilotLastRun(day) {
+  try {
+    fs.mkdirSync(path.dirname(AUTOPILOT_STATE_FILE), { recursive: true });
+    fs.writeFileSync(AUTOPILOT_STATE_FILE, JSON.stringify({ lastRun: day }, null, 2));
+  } catch (e) {
+    console.log(`autopilot ERROR state save: ${e.message}`);
+  }
+}
+
+function stripMarkdown(text) {
+  return text
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)')
+    .replace(/\*\*/g, '')
+    .replace(/^#+\s*/gm, '');
+}
+
+async function autopilotTick() {
+  const cfg = loadAutopilotConfig();
+  console.log(`autopilot: tick enabled=${cfg.enabled}`);
+  if (!cfg.enabled) return;
+
+  const now = new Date();
+  const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  if (hhmm !== cfg.time) return;
+  if (!Array.isArray(cfg.days) || !cfg.days.includes(now.getDay())) return;
+
+  const today = now.toISOString().slice(0, 10);
+  if (autopilotLastRun() === today) return;
+  saveAutopilotLastRun(today);
+
+  try {
+    const { topic, text } = await generateAutoPost();
+    console.log(`autopilot: generated topic=${topic}`);
+    const clean = stripMarkdown(text);
+    for (const ch of cfg.channels || []) {
+      try {
+        if (ch === 'tg') await publishTelegram(ALLOWED_TARGETS[0], clean, null);
+        else if (ch === 'vk') await publishVk(clean, null);
+        else continue;
+        console.log(`autopilot: published ${ch} OK`);
+      } catch (e) {
+        console.log(`autopilot ERROR publish ${ch}: ${e.message}`);
+      }
+    }
+  } catch (e) {
+    console.log(`autopilot ERROR ${e.message}`);
+  }
+}
 
 const port = Number(process.env.PORT) || 3000;
 loadVkToken();
@@ -533,6 +621,8 @@ app.listen(port, () => {
   console.log(`proxy listening on ${port}`);
   console.log(`vk token: ${tokenDesc(vkToken.access_token)}`);
   console.log(`tg token: ${tokenDesc(process.env.TELEGRAM_BOT_TOKEN)}`);
+  ensureAutopilotConfig();
+  setInterval(autopilotTick, 60 * 1000);
   vkSelfTest();
 });
 
