@@ -369,7 +369,9 @@ async function getGigachatToken() {
   return cachedToken.token;
 }
 
-async function generateWithGigachat(task) {
+const GIGACHAT_SYSTEM_PROMPT = 'Ты — маркетолог студии STIMIT. Пиши продающие посты для Telegram и VK: живой тон, структура, призыв к действию. До 900 знаков. Не выдумывай цифры и факты.';
+
+async function generateWithGigachat(task, systemPrompt = GIGACHAT_SYSTEM_PROMPT) {
   const token = await getGigachatToken();
   const res = await httpsPostJson(GIGACHAT_CHAT_URL, {
     headers: {
@@ -381,10 +383,7 @@ async function generateWithGigachat(task) {
       max_tokens: 1500,
       temperature: 0.7,
       messages: [
-        {
-          role: 'system',
-          content: 'Ты — маркетолог студии STIMIT. Пиши продающие посты для Telegram и VK: живой тон, структура, призыв к действию. До 900 знаков. Не выдумывай цифры и факты.',
-        },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: task },
       ],
     },
@@ -429,6 +428,101 @@ app.post('/generate', async (req, res) => {
     res.json({ text, imageUrl: null });
   } catch (e) {
     console.log(`generate failed: status=error reason=${e.message}`);
+    res.status(500).json({ ok: false, error: 'generation_failed', reason: e.message });
+  }
+});
+
+// --- Авто-генерация поста из базы знаний ---
+const KB_FILE = '/data/stimit_base.md';
+const AUTO_STATE_FILE = '/data/auto_state.json';
+
+function parseTopics(base) {
+  const lines = base.split('\n');
+  const start = lines.findIndex((l) => l.trim().startsWith('## ТЕМЫ ДЛЯ ПОСТОВ'));
+  if (start === -1) return [];
+  const topics = [];
+  for (let i = start + 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.startsWith('## ')) break;
+    const m = line.match(/^\d+\.\s+(.+)/);
+    if (m) topics.push(m[1].trim());
+  }
+  return topics;
+}
+
+function loadAutoState() {
+  try {
+    const data = JSON.parse(fs.readFileSync(AUTO_STATE_FILE, 'utf8'));
+    return { topicIndex: Number(data.topicIndex) || 0 };
+  } catch (e) {
+    return { topicIndex: 0 };
+  }
+}
+
+function saveAutoState(state) {
+  try {
+    fs.mkdirSync(path.dirname(AUTO_STATE_FILE), { recursive: true });
+    fs.writeFileSync(AUTO_STATE_FILE, JSON.stringify(state, null, 2));
+  } catch (e) {
+    console.log(`auto state save ERROR: ${e.message}`);
+  }
+}
+
+const autoHits = new Map(); // ip -> number[]
+
+function autoRateLimited(ip) {
+  const now = Date.now();
+  const list = (autoHits.get(ip) || []).filter((t) => now - t < GEN_WINDOW_1H);
+  autoHits.set(ip, list);
+  if (list.length >= 5) return true;
+  list.push(now);
+  return false;
+}
+
+app.post('/generate-auto', async (req, res) => {
+  if (!process.env.GIGACHAT_CREDENTIALS) {
+    return res.status(500).json({ ok: false, error: 'gigachat_not_configured' });
+  }
+
+  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+  if (autoRateLimited(ip)) {
+    console.log('auto generate denied: status=rate_limited');
+    return res.status(429).json({ ok: false, error: 'rate_limited' });
+  }
+
+  let base;
+  try {
+    base = fs.readFileSync(KB_FILE, 'utf8');
+  } catch (e) {
+    console.log('knowledge base missing');
+    return res.status(503).json({ error: 'no_base' });
+  }
+
+  const topics = parseTopics(base);
+  if (!topics.length) {
+    console.log('knowledge base missing');
+    return res.status(503).json({ error: 'no_base' });
+  }
+
+  const state = loadAutoState();
+  const topic = topics[state.topicIndex % topics.length];
+
+  try {
+    const systemPrompt = [
+      'Ты — SMM-агент студии STIMIT. Ниже — база знаний студии.',
+      '',
+      base,
+      '',
+      `Тема поста: ${topic}`,
+      '',
+      'Напиши пост по этой теме, строго соблюдая правила из разделов ТОН И СТИЛЬ и ЗАПРЕТЫ базы знаний.',
+    ].join('\n');
+    const text = await generateWithGigachat(topic, systemPrompt);
+    saveAutoState({ topicIndex: (state.topicIndex + 1) % topics.length });
+    console.log(`auto generate: topic=${topic} status=ok`);
+    res.json({ ok: true, topic, text });
+  } catch (e) {
+    console.log(`auto generate failed: topic=${topic} status=error reason=${e.message}`);
     res.status(500).json({ ok: false, error: 'generation_failed', reason: e.message });
   }
 });
