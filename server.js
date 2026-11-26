@@ -94,18 +94,26 @@ async function publishTelegram(target, text, imageUrl) {
   return { id: data.result?.message_id };
 }
 
+function tokenDesc(token) {
+  if (!token) return 'set=no len=0 head=- tail=-';
+  return `set=yes len=${token.length} head=${token.slice(0, 8)} tail=${token.slice(-4)}`;
+}
+
 async function vkCall(method, params) {
   const token = process.env.VK_ACCESS_TOKEN;
   if (!token) throw new Error('vk_not_configured');
   const body = new URLSearchParams({
     ...params,
-    access_token: token,
     v: VK_API_VERSION,
+  }).toString() + '&access_token=' + token;
+  const r = await fetch(`${VK_API}/${method}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
   });
-  const r = await fetch(`${VK_API}/${method}`, { method: 'POST', body });
   const data = await r.json();
   if (data.error) {
-    console.log(`publish VK ERROR: ${data.error.error_msg || 'unknown'} (code ${data.error.error_code})`);
+    console.log(`publish VK ERROR: ${data.error.error_msg || 'unknown'} (code ${data.error.error_code}) token len=${token.length} head=${token.slice(0, 8)}`);
     throw new Error(`vk_api_error_${data.error.error_code}`);
   }
   console.log(`publish VK OK: ${method}`);
@@ -330,4 +338,8 @@ app.post('/generate', async (req, res) => {
 });
 
 const port = Number(process.env.PORT) || 3000;
-app.listen(port, () => console.log(`proxy listening on ${port}`));
+app.listen(port, () => {
+  console.log(`proxy listening on ${port}`);
+  console.log(`vk token: ${tokenDesc(process.env.VK_ACCESS_TOKEN)}`);
+  console.log(`tg token: ${tokenDesc(process.env.TELEGRAM_BOT_TOKEN)}`);
+});
