@@ -2241,15 +2241,22 @@
                 const url =
                   (ch && typeof ch.url === 'string' && ch.url) ||
                   (group ? group.target : '');
+                const label = name === 'tg' ? 'TG' : 'VK';
+                if (ch && ch.ok === false) {
+                  return `
+                    <span class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2 py-1">
+                      ${renderPlatformIcon(name)}
+                      <span class="text-[11px] font-semibold text-red-800">${label} не отправлено</span>
+                    </span>
+                  `;
+                }
                 const openLink = url
                   ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="text-[11px] font-semibold text-[#1B3A6B] hover:underline underline-offset-2">Открыть</a>`
                   : '';
                 return `
-                  <span class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/80 bg-slate-50/80 px-2 py-1">
+                  <span class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1">
                     ${renderPlatformIcon(name)}
-                    <span class="text-[11px] font-semibold text-slate-700">${
-                      name === 'tg' ? 'Telegram' : 'VK'
-                    }</span>
+                    <span class="text-[11px] font-semibold text-emerald-800">${label} отправлено ✓</span>
                     ${openLink}
                   </span>
                 `;

@@ -62,7 +62,10 @@ function saveAutopilotLastRun(day) {
 
 function stripMarkdown(text) {
   return text
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, url) => {
+      const looksLikeUrl = /[/.]/.test(label) && !/\s/.test(label);
+      return looksLikeUrl ? url : `${label} (${url})`;
+    })
     .replace(/\*\*/g, '')
     .replace(/^#+\s*/gm, '');
 }
