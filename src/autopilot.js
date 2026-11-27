@@ -105,9 +105,12 @@ export async function autopilotTick() {
   console.log(`autopilot: tick мск=${nowMsk.date} ${nowMsk.hhmm} день=${nowMsk.day} задано=${cfg.time} дни=${JSON.stringify(cfg.days)} совпало=${matched ? 'да' : 'нет'}`);
   if (!matched) return;
 
-  const today = nowMsk.date;
-  if (autopilotLastRun() === today) return;
-  saveAutopilotLastRun(today);
+  const slot = `${nowMsk.date} ${cfg.time}`;
+  if (autopilotLastRun() === slot) {
+    console.log(`autopilot: слот ${cfg.time} сегодня уже отправлен, пропуск`);
+    return;
+  }
+  saveAutopilotLastRun(slot);
 
   try {
     const { topic, text } = await generateAutoPost();
