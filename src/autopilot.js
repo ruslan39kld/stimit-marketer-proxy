@@ -67,17 +67,42 @@ function stripMarkdown(text) {
     .replace(/^#+\s*/gm, '');
 }
 
+const MOSCOW_TZ = 'Europe/Moscow';
+const WEEKDAY_TO_NUM = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+const moscowFmt = new Intl.DateTimeFormat('en-GB', {
+  timeZone: MOSCOW_TZ,
+  hourCycle: 'h23',
+  hour: '2-digit',
+  minute: '2-digit',
+  weekday: 'short',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+function moscowNow() {
+  const parts = Object.fromEntries(
+    moscowFmt.formatToParts(new Date()).map((p) => [p.type, p.value])
+  );
+  return {
+    hhmm: `${parts.hour}:${parts.minute}`,
+    day: WEEKDAY_TO_NUM[parts.weekday],
+    date: `${parts.year}-${parts.month}-${parts.day}`,
+  };
+}
+
 export async function autopilotTick() {
   const cfg = loadAutopilotConfig();
   console.log(`autopilot: tick enabled=${cfg.enabled}`);
   if (!cfg.enabled) return;
 
-  const now = new Date();
-  const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  if (hhmm !== cfg.time) return;
-  if (!Array.isArray(cfg.days) || !cfg.days.includes(now.getDay())) return;
+  const nowMsk = moscowNow();
+  const dayMatches = Array.isArray(cfg.days) && cfg.days.includes(nowMsk.day);
+  const matched = nowMsk.hhmm === cfg.time && dayMatches;
+  console.log(`autopilot: tick мск=${nowMsk.date} ${nowMsk.hhmm} день=${nowMsk.day} задано=${cfg.time} дни=${JSON.stringify(cfg.days)} совпало=${matched ? 'да' : 'нет'}`);
+  if (!matched) return;
 
-  const today = now.toISOString().slice(0, 10);
+  const today = nowMsk.date;
   if (autopilotLastRun() === today) return;
   saveAutopilotLastRun(today);
 

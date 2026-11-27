@@ -495,6 +495,14 @@
               </button>
             </div>
 
+            <p
+              id="autopilot-next-send"
+              class="text-[11px] text-slate-500 tabular-nums"
+              role="status"
+            >
+              Следующая отправка: —
+            </p>
+
             <div
               id="autopilot-publish-steps"
               class="hidden space-y-1.5"
@@ -508,15 +516,6 @@
             ></p>
           </div>
 
-          <!-- Вопросы подписчиков -->
-          <div class="shrink-0 bg-white/95 border-t border-cyan-500/15 p-3.5">
-            <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2.5">
-              Вопросы подписчиков
-            </h3>
-            <div id="subscriber-questions" class="space-y-2">
-              <!-- Вопросы рендерятся скриптом -->
-            </div>
-          </div>
         </section>
 
         <!-- ЦЕНТРАЛЬНАЯ КОЛОНКА (~40%): Задача агенту + Лента публикаций -->
@@ -996,27 +995,6 @@
         },
       ];
 
-      const SUBSCRIBER_QUESTIONS = [
-        {
-          initials: 'АМ',
-          color: 'bg-blue-100 text-[#1B3A6B]',
-          name: 'Алексей',
-          text: 'Сколько стоит такой агент для моего бизнеса?',
-        },
-        {
-          initials: 'ЕК',
-          color: 'bg-emerald-100 text-emerald-800',
-          name: 'Елена',
-          text: 'А агент может вести наш канал целиком?',
-        },
-        {
-          initials: 'ДС',
-          color: 'bg-amber-100 text-amber-800',
-          name: 'Дмитрий',
-          text: 'Чем это лучше обычного чат-бота?',
-        },
-      ];
-
       const EXAMPLE_TASKS = [
         'Сделай пост про скидку 20% на аудит процессов',
         'Напиши короткий кейс: как AI-агент ускорил подготовку контента в 4 раза',
@@ -1025,7 +1003,6 @@
 
       // DOM elements
       const feedEl = document.getElementById('telegram-feed');
-      const questionsEl = document.getElementById('subscriber-questions');
       const taskInput = document.getElementById('task-input');
       const charCounter = document.getElementById('char-counter');
       const runBtn = document.getElementById('run-agent-btn');
@@ -1180,45 +1157,6 @@
         if (highlightNewest) {
           feedEl.scrollTo({ top: 0, behavior: 'smooth' });
         }
-      }
-
-      function renderSubscriberQuestions() {
-        questionsEl.innerHTML = SUBSCRIBER_QUESTIONS.map(
-          (q, index) => `
-          <div class="rounded-xl border border-slate-200/80 bg-slate-50/80 p-2.5 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white hover:border-cyan-400/55 hover:shadow-md">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div class="flex items-start gap-2.5 min-w-0">
-                <div class="w-7 h-7 rounded-full ${q.color} text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
-                  ${escapeHtml(q.initials)}
-                </div>
-                <div class="min-w-0 flex-1">
-                  <div class="text-xs font-bold text-slate-900">${escapeHtml(q.name)}</div>
-                  <p class="text-xs text-slate-600 mt-0.5 leading-snug">«${escapeHtml(q.text)}»</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                data-question-index="${index}"
-                class="assign-question-btn self-end sm:self-center shrink-0 text-xs font-semibold text-[#1B3A6B] hover:text-cyan-700 bg-white hover:bg-cyan-50/70 border border-slate-200 hover:border-cyan-400/60 rounded-lg px-2.5 py-1.5 transition-all duration-150 cursor-pointer whitespace-nowrap"
-              >
-                Поручить агенту
-              </button>
-            </div>
-          </div>
-        `
-        ).join('');
-
-        questionsEl.querySelectorAll('.assign-question-btn').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            if (isRunning) return;
-            const idx = Number(btn.getAttribute('data-question-index'));
-            const q = SUBSCRIBER_QUESTIONS[idx];
-            if (!q) return;
-            const promptText = `Ответь подписчику ${q.name}: «${q.text}»`;
-            setTaskText(promptText);
-            taskInput.focus();
-          });
-        });
       }
 
       function renderExampleChips() {
@@ -1951,7 +1889,52 @@
       const autopilotPublishNowBtn = document.getElementById('autopilot-publish-now-btn');
       const autopilotPublishStepsEl = document.getElementById('autopilot-publish-steps');
       const autopilotStatusEl = document.getElementById('autopilot-status');
+      const autopilotNextSendEl = document.getElementById('autopilot-next-send');
       const postsFeedEl = document.getElementById('posts-feed');
+
+      const MOSCOW_TZ = 'Europe/Moscow';
+      const MOSCOW_WEEKDAY_NUM = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+      const moscowPartsFmt = new Intl.DateTimeFormat('en-GB', {
+        timeZone: MOSCOW_TZ,
+        hourCycle: 'h23',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        weekday: 'short',
+      });
+
+      function getMoscowParts(date) {
+        const parts = Object.fromEntries(
+          moscowPartsFmt.formatToParts(date).map((p) => [p.type, p.value])
+        );
+        return {
+          dateStr: `${parts.day}.${parts.month}.${parts.year}`,
+          minutes: Number(parts.hour) * 60 + Number(parts.minute),
+          weekday: MOSCOW_WEEKDAY_NUM[parts.weekday],
+        };
+      }
+
+      function renderNextSend() {
+        const days = getSelectedAutopilotDays();
+        const time = autopilotTimeInput.value;
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time) || !days.length) {
+          autopilotNextSendEl.textContent = 'Следующая отправка: —';
+          return;
+        }
+        const [hh, mm] = time.split(':').map(Number);
+        const sendMinutes = hh * 60 + mm;
+        for (let i = 0; i <= 7; i++) {
+          const candidate = new Date(Date.now() + i * 86400000);
+          const p = getMoscowParts(candidate);
+          if (!days.includes(p.weekday)) continue;
+          if (i === 0 && p.minutes >= sendMinutes) continue;
+          autopilotNextSendEl.textContent = `Следующая отправка: ${p.dateStr} ${time} (мск)`;
+          return;
+        }
+        autopilotNextSendEl.textContent = 'Следующая отправка: —';
+      }
 
       let autopilotEnabled = false;
       let autopilotSaving = false;
@@ -2039,6 +2022,7 @@
           autopilotChTg.checked = channels.includes('tg');
           autopilotChVk.checked = channels.includes('vk');
           renderAutopilotToggle();
+          renderNextSend();
         } catch (e) {
           setAutopilotStatus('error', 'Не удалось загрузить настройки автопилота');
         }
@@ -2077,6 +2061,7 @@
           });
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
           setAutopilotStatus('ok', 'Расписание сохранено');
+          renderNextSend();
           return true;
         } catch (e) {
           setAutopilotStatus('error', 'Не удалось сохранить расписание');
@@ -2207,21 +2192,30 @@
       }
 
       // --- Лента публикаций ---
+      const moscowDayFmt = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Moscow',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+
       function formatPostTime(ts) {
         const d = new Date(ts);
         if (Number.isNaN(d.getTime())) return '';
         const hhmm = d.toLocaleTimeString('ru-RU', {
+          timeZone: 'Europe/Moscow',
           hour: '2-digit',
           minute: '2-digit',
         });
-        const now = new Date();
-        if (d.toDateString() === now.toDateString()) return `сегодня, ${hhmm}`;
-        const yesterday = new Date(now);
-        yesterday.setDate(now.getDate() - 1);
-        if (d.toDateString() === yesterday.toDateString()) {
+        const dDay = moscowDayFmt.format(d);
+        const todayDay = moscowDayFmt.format(new Date());
+        if (dDay === todayDay) return `сегодня, ${hhmm}`;
+        const yesterdayDay = moscowDayFmt.format(new Date(Date.now() - 86400000));
+        if (dDay === yesterdayDay) {
           return `вчера, ${hhmm}`;
         }
         return `${d.toLocaleDateString('ru-RU', {
+          timeZone: 'Europe/Moscow',
           day: 'numeric',
           month: 'long',
         })}, ${hhmm}`;
@@ -2375,7 +2369,6 @@
 
       // Init
       renderPosts(false);
-      renderSubscriberQuestions();
       renderExampleChips();
       renderPipeline();
       renderConnectedGroups();
