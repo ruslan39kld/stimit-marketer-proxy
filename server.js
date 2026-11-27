@@ -5,7 +5,8 @@ import { generateWithGigachat } from './src/gigachat.js';
 import { publishTelegram, ALLOWED_TARGETS } from './src/telegram.js';
 import { vkToken, tokenDesc, loadVkToken, publishVk, vkSelfTest } from './src/vk.js';
 import { generateAutoPost } from './src/knowledge.js';
-import { ensureAutopilotConfig, autopilotTick } from './src/autopilot.js';
+import { ensureAutopilotConfig, autopilotTick, getAutopilotConfig, saveAutopilotOverride } from './src/autopilot.js';
+import { logPublication, getRecentPosts } from './src/postslog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -82,6 +83,10 @@ app.post('/publish', async (req, res) => {
       ? await publishTelegram(target, text, imageUrl)
       : await publishVk(text, imageUrl);
     console.log(`published: platform=${platform} target=${target} status=ok`);
+    const url = platform === 'tg'
+      ? target
+      : ALLOWED_TARGETS.find((t) => t.includes('vk.ru')) || target;
+    logPublication({ topic: null, text, channels: [{ name: platform, ok: true, url }] });
     res.json({ ok: true, result });
   } catch (e) {
     console.log(`publish failed: platform=${platform} target=${target} status=error`);
@@ -90,6 +95,57 @@ app.post('/publish', async (req, res) => {
 });
 
 app.get('/health', (req, res) => res.json({ ok: true }));
+
+// --- Журнал публикаций ---
+app.get('/api/posts', (req, res) => {
+  res.json(getRecentPosts(50));
+});
+
+// --- API управления автопилотом ---
+const apHits = new Map(); // ip -> number[]
+
+function apRateLimited(ip) {
+  const now = Date.now();
+  const list = (apHits.get(ip) || []).filter((t) => now - t < GEN_WINDOW_1H);
+  apHits.set(ip, list);
+  if (list.length >= 30) return true;
+  list.push(now);
+  return false;
+}
+
+function validAutopilotConfig(body) {
+  if (!body || typeof body !== 'object') return false;
+  if (typeof body.enabled !== 'boolean') return false;
+  if (typeof body.time !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(body.time)) return false;
+  if (!Array.isArray(body.days) || !body.days.length ||
+      !body.days.every((d) => Number.isInteger(d) && d >= 0 && d <= 6)) return false;
+  if (!Array.isArray(body.channels) || !body.channels.length ||
+      !body.channels.every((c) => c === 'tg' || c === 'vk')) return false;
+  return true;
+}
+
+app.get('/api/autopilot', (req, res) => {
+  res.json(getAutopilotConfig());
+});
+
+app.post('/api/autopilot', (req, res) => {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+  if (apRateLimited(ip)) {
+    console.log('autopilot config denied: status=rate_limited');
+    return res.status(429).json({ ok: false, error: 'rate_limited' });
+  }
+  if (!validAutopilotConfig(req.body)) {
+    return res.status(400).json({ ok: false, error: 'invalid_request' });
+  }
+  const { enabled, time, days, channels } = req.body;
+  try {
+    saveAutopilotOverride({ enabled, time, days, channels });
+    res.json({ ok: true });
+  } catch (e) {
+    console.log(`autopilot config save ERROR: ${e.message}`);
+    res.status(500).json({ ok: false, error: 'save_failed' });
+  }
+});
 
 // --- Статика фронта ---
 app.use(express.static(__dirname));

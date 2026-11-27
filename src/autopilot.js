@@ -4,10 +4,12 @@ import { fileURLToPath } from 'node:url';
 import { generateAutoPost } from './knowledge.js';
 import { publishTelegram, ALLOWED_TARGETS } from './telegram.js';
 import { publishVk } from './vk.js';
+import { logPublication } from './postslog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const AUTOPILOT_FILE = path.join(__dirname, '..', 'config', 'autopilot.json');
+const AUTOPILOT_OVERRIDE_FILE = '/data/autopilot_override.json';
 const AUTOPILOT_STATE_FILE = '/data/autopilot_state.json';
 const AUTOPILOT_DEFAULT = { enabled: false, time: '10:00', days: [1, 2, 3, 4, 5], channels: ['tg', 'vk'] };
 
@@ -24,10 +26,21 @@ export function ensureAutopilotConfig() {
 
 function loadAutopilotConfig() {
   try {
-    return { ...AUTOPILOT_DEFAULT, ...JSON.parse(fs.readFileSync(AUTOPILOT_FILE, 'utf8')) };
+    const file = fs.existsSync(AUTOPILOT_OVERRIDE_FILE) ? AUTOPILOT_OVERRIDE_FILE : AUTOPILOT_FILE;
+    return { ...AUTOPILOT_DEFAULT, ...JSON.parse(fs.readFileSync(file, 'utf8')) };
   } catch (e) {
     return { ...AUTOPILOT_DEFAULT };
   }
+}
+
+export function getAutopilotConfig() {
+  return loadAutopilotConfig();
+}
+
+export function saveAutopilotOverride(cfg) {
+  fs.mkdirSync(path.dirname(AUTOPILOT_OVERRIDE_FILE), { recursive: true });
+  fs.writeFileSync(AUTOPILOT_OVERRIDE_FILE, JSON.stringify(cfg, null, 2));
+  console.log('autopilot config updated via API');
 }
 
 function autopilotLastRun() {
@@ -72,15 +85,25 @@ export async function autopilotTick() {
     const { topic, text } = await generateAutoPost();
     console.log(`autopilot: generated topic=${topic}`);
     const clean = stripMarkdown(text);
+    const publishedChannels = [];
     for (const ch of cfg.channels || []) {
       try {
-        if (ch === 'tg') await publishTelegram(ALLOWED_TARGETS[0], clean, null);
-        else if (ch === 'vk') await publishVk(clean, null);
-        else continue;
+        let url = null;
+        if (ch === 'tg') {
+          url = ALLOWED_TARGETS[0];
+          await publishTelegram(url, clean, null);
+        } else if (ch === 'vk') {
+          url = ALLOWED_TARGETS.find((t) => t.includes('vk.ru')) || null;
+          await publishVk(clean, null);
+        } else continue;
+        publishedChannels.push({ name: ch, ok: true, url });
         console.log(`autopilot: published ${ch} OK`);
       } catch (e) {
         console.log(`autopilot ERROR publish ${ch}: ${e.message}`);
       }
+    }
+    if (publishedChannels.length) {
+      logPublication({ topic, text: clean, channels: publishedChannels });
     }
   } catch (e) {
     console.log(`autopilot ERROR ${e.message}`);
