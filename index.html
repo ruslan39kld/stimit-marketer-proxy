@@ -257,6 +257,30 @@
         background: rgba(14, 165, 233, 0.48);
       }
 
+      /* Чипсы дней недели в пульте автопилота */
+      .autopilot-day-chip {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 0.65rem;
+        font-size: 0.72rem;
+        font-weight: 700;
+        border: 1px solid rgba(203, 213, 225, 0.9);
+        background: rgba(241, 245, 249, 0.9);
+        color: #64748b;
+        cursor: pointer;
+        transition: all 160ms ease;
+      }
+      .autopilot-day-chip:hover {
+        border-color: rgba(34, 211, 238, 0.65);
+        color: #1b3a6b;
+      }
+      .autopilot-day-chip.is-active {
+        background: #1b3a6b;
+        border-color: #1b3a6b;
+        color: #ffffff;
+        box-shadow: 0 3px 10px -3px rgba(27, 58, 107, 0.5);
+      }
+
       @media (prefers-reduced-motion: reduce) {
         .live-dot,
         .animate-post-in,
@@ -340,39 +364,148 @@
       <div
         class="grid grid-cols-1 lg:grid-cols-10 gap-4 lg:gap-5 lg:flex-1 lg:min-h-0 items-stretch"
       >
-        <!-- ЛЕВАЯ КОЛОНКА (~30%): Демо-канал STIMIT -->
+        <!-- ЛЕВАЯ КОЛОНКА (~30%): Пульт автопилота -->
         <section
-          aria-label="Демо-канал STIMIT"
+          aria-label="Пульт автопилота"
           class="order-3 lg:order-none lg:col-span-3 stimit-card rounded-2xl overflow-hidden flex flex-col lg:h-full lg:min-h-0"
         >
-          <!-- Заголовок канала в стиле Telegram -->
+          <!-- Заголовок пульта + переключатель Вкл/Выкл -->
           <div
             class="shrink-0 px-4 py-3 bg-white/95 border-b border-cyan-500/15 flex items-center justify-between gap-3"
           >
             <div class="flex items-center gap-3 min-w-0">
               <div
-                class="w-9 h-9 rounded-full stimit-header-bg text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm ring-2 ring-cyan-400/25"
+                class="w-9 h-9 rounded-full stimit-header-bg text-white flex items-center justify-center shrink-0 shadow-sm ring-2 ring-cyan-400/25"
                 aria-hidden="true"
               >
-                ST
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
               </div>
               <div class="min-w-0">
                 <h2 class="text-sm font-bold text-slate-900 truncate">
-                  Демо-канал STIMIT
+                  Пульт автопилота
                 </h2>
-                <p class="text-xs text-slate-500 truncate">
-                  Telegram-канал · витрина прототипов
+                <p
+                  id="autopilot-state-caption"
+                  class="text-xs text-slate-500 truncate"
+                >
+                  Автопилот выключен
                 </p>
               </div>
             </div>
+            <button
+              id="autopilot-toggle"
+              type="button"
+              role="switch"
+              aria-checked="false"
+              aria-label="Включить автопилот"
+              class="relative shrink-0 w-11 h-6 rounded-full bg-slate-300 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-cyan-500"
+            >
+              <span
+                id="autopilot-toggle-knob"
+                class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200"
+                aria-hidden="true"
+              ></span>
+            </button>
           </div>
 
-          <!-- Лента постов -->
+          <!-- Форма расписания автопилота -->
           <div
-            id="telegram-feed"
-            class="tg-feed-bg tg-scroll p-3.5 space-y-2.5 lg:flex-1 lg:min-h-0 lg:overflow-y-auto"
+            class="p-3.5 space-y-3.5 lg:flex-1 lg:min-h-0 lg:overflow-y-auto tg-scroll"
           >
-            <!-- Посты рендерятся скриптом -->
+            <div>
+              <label
+                for="autopilot-time"
+                class="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-1.5"
+              >
+                Время отправки
+              </label>
+              <input
+                id="autopilot-time"
+                type="time"
+                value="10:00"
+                class="w-full rounded-xl border border-slate-300/90 bg-slate-50/70 px-3 py-2 text-sm text-slate-900 focus:bg-white focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all duration-200"
+              />
+            </div>
+
+            <div>
+              <span
+                class="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-1.5"
+              >
+                Дни недели
+              </span>
+              <div id="autopilot-days" class="flex flex-wrap gap-1.5">
+                <button type="button" data-day="1" class="autopilot-day-chip">Пн</button>
+                <button type="button" data-day="2" class="autopilot-day-chip">Вт</button>
+                <button type="button" data-day="3" class="autopilot-day-chip">Ср</button>
+                <button type="button" data-day="4" class="autopilot-day-chip">Чт</button>
+                <button type="button" data-day="5" class="autopilot-day-chip">Пт</button>
+                <button type="button" data-day="6" class="autopilot-day-chip">Сб</button>
+                <button type="button" data-day="0" class="autopilot-day-chip">Вс</button>
+              </div>
+            </div>
+
+            <fieldset>
+              <legend
+                class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-1.5"
+              >
+                Каналы
+              </legend>
+              <div class="flex flex-wrap gap-2">
+                <label
+                  class="flex items-center gap-2 cursor-pointer rounded-xl border border-slate-200/80 bg-slate-50/70 px-3 py-2 hover:border-cyan-400/60 hover:bg-white transition-all"
+                >
+                  <input
+                    id="autopilot-ch-tg"
+                    type="checkbox"
+                    checked
+                    class="w-4 h-4 accent-[#1B3A6B]"
+                  />
+                  <span class="text-xs font-semibold text-slate-800">Telegram</span>
+                </label>
+                <label
+                  class="flex items-center gap-2 cursor-pointer rounded-xl border border-slate-200/80 bg-slate-50/70 px-3 py-2 hover:border-cyan-400/60 hover:bg-white transition-all"
+                >
+                  <input
+                    id="autopilot-ch-vk"
+                    type="checkbox"
+                    checked
+                    class="w-4 h-4 accent-[#1B3A6B]"
+                  />
+                  <span class="text-xs font-semibold text-slate-800">VK</span>
+                </label>
+              </div>
+            </fieldset>
+
+            <div class="space-y-2 pt-0.5">
+              <button
+                id="autopilot-save-btn"
+                type="button"
+                class="w-full stimit-btn-gradient text-white font-semibold text-xs sm:text-sm rounded-xl px-4 py-2.5 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-cyan-500"
+              >
+                Сохранить расписание
+              </button>
+              <button
+                id="autopilot-publish-now-btn"
+                type="button"
+                class="w-full text-[#1B3A6B] font-semibold text-xs sm:text-sm rounded-xl px-4 py-2.5 bg-white hover:bg-cyan-50/80 border border-slate-200 hover:border-cyan-400/60 flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-cyan-500"
+              >
+                Опубликовать сейчас
+              </button>
+            </div>
+
+            <div
+              id="autopilot-publish-steps"
+              class="hidden space-y-1.5"
+              role="status"
+            ></div>
+
+            <p
+              id="autopilot-status"
+              class="hidden text-xs leading-snug rounded-xl px-3 py-2"
+              role="status"
+            ></p>
           </div>
 
           <!-- Вопросы подписчиков -->
@@ -386,15 +519,15 @@
           </div>
         </section>
 
-        <!-- ЦЕНТРАЛЬНАЯ КОЛОНКА (~40%): Задача агенту -->
+        <!-- ЦЕНТРАЛЬНАЯ КОЛОНКА (~40%): Задача агенту + Лента публикаций -->
         <section
-          aria-label="Задача агенту"
-          class="order-1 lg:order-none lg:col-span-4 stimit-card rounded-2xl p-4 sm:p-5 flex flex-col lg:h-full lg:min-h-0"
+          aria-label="Задача агенту и лента публикаций"
+          class="order-1 lg:order-none lg:col-span-4 flex flex-col gap-4 lg:h-full lg:min-h-0"
         >
           <!-- Состояние 429: квота исчерпана (скрыто по умолчанию) -->
           <div
             id="quota-exceeded-view"
-            class="hidden flex-1 flex flex-col items-center justify-center py-8 px-4 text-center animate-fade-up"
+            class="hidden flex-1 flex flex-col items-center justify-center py-8 px-4 text-center animate-fade-up stimit-card rounded-2xl"
           >
             <div
               class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-cyan-50 border border-cyan-200 text-[#1B3A6B] flex items-center justify-center shadow-sm"
@@ -423,8 +556,11 @@
             </p>
           </div>
 
-          <!-- Основная форма задачи -->
-          <div id="task-form-view" class="flex-1 min-h-0 flex flex-col">
+          <!-- Компактная форма задачи: одна строка ввода + кнопка -->
+          <div
+            id="task-form-view"
+            class="shrink-0 stimit-card rounded-2xl p-4 sm:p-5 flex flex-col"
+          >
             <div class="shrink-0 flex items-center justify-between gap-2 mb-2.5">
               <h2 class="text-lg font-bold text-slate-900">Задача агенту</h2>
               <span
@@ -435,29 +571,16 @@
               </span>
             </div>
 
-            <p
-              class="shrink-0 mb-3 rounded-xl border border-cyan-500/20 bg-slate-50/90 px-3 py-2 text-xs leading-relaxed text-slate-600 break-words"
-            >
-              Как попробовать за 30 секунд: 1) выберите пример задачи или напишите свою → 2) нажмите «Запустить агента» → 3) нажмите «Опубликовать» и откройте демо-группу — пост появится там вживую
-            </p>
-
-            <div class="flex-1 min-h-0 flex flex-col gap-3">
+            <div class="flex flex-col sm:flex-row gap-2.5">
               <label for="task-input" class="sr-only">
                 Текст задачи для AI-маркетолога
               </label>
-              <textarea
+              <input
                 id="task-input"
-                rows="5"
+                type="text"
                 placeholder="Например: сделай пост про скидку 20% на аудит процессов"
-                class="flex-1 min-h-[160px] lg:min-h-0 w-full rounded-xl border border-slate-300/90 bg-slate-50/70 px-4 py-3.5 text-sm leading-relaxed text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all duration-200 resize-none"
-              ></textarea>
-
-              <!-- Мягкая подсказка / уведомление / ошибка -->
-              <div
-                id="feedback-banner"
-                class="hidden shrink-0 rounded-xl px-3.5 py-2.5 text-sm animate-fade-up"
-                role="alert"
-              ></div>
+                class="flex-1 min-w-0 rounded-xl border border-slate-300/90 bg-slate-50/70 px-4 py-3 text-sm leading-relaxed text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all duration-200"
+              />
 
               <!-- Кнопка запуска + пузырь-подсказка первого визита -->
               <div class="relative shrink-0">
@@ -476,7 +599,7 @@
                 <button
                   id="run-agent-btn"
                   type="button"
-                  class="w-full stimit-btn-gradient text-white font-semibold text-sm sm:text-base rounded-xl px-5 py-3.5 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-cyan-500"
+                  class="w-full sm:w-auto whitespace-nowrap stimit-btn-gradient text-white font-semibold text-sm sm:text-base rounded-xl px-5 py-3 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-cyan-500"
                 >
                   <span id="run-btn-spinner" class="hidden">
                     <svg
@@ -504,14 +627,47 @@
               </div>
             </div>
 
+            <!-- Мягкая подсказка / уведомление / ошибка -->
+            <div class="shrink-0 mt-2.5">
+              <div
+                id="feedback-banner"
+                class="hidden rounded-xl px-3.5 py-2.5 text-sm animate-fade-up"
+                role="alert"
+              ></div>
+            </div>
+
             <!-- Чипсы-примеры -->
-            <div class="shrink-0 mt-4 pt-3.5 border-t border-cyan-500/15">
+            <div class="shrink-0 mt-3 pt-3 border-t border-cyan-500/15">
               <p class="text-xs font-semibold text-slate-500 mb-2">
                 Примеры задач:
               </p>
               <div id="example-chips" class="flex flex-wrap gap-2">
                 <!-- Чипсы рендерятся скриптом -->
               </div>
+            </div>
+          </div>
+
+          <!-- Лента публикаций -->
+          <div
+            class="stimit-card rounded-2xl p-4 sm:p-5 flex flex-col flex-1 min-h-[220px] lg:min-h-0"
+          >
+            <div class="shrink-0 flex items-center justify-between gap-2 mb-3">
+              <h2 class="text-lg font-bold text-slate-900">Лента публикаций</h2>
+              <span
+                class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500"
+              >
+                <span
+                  class="w-1.5 h-1.5 rounded-full bg-emerald-500 live-dot"
+                  aria-hidden="true"
+                ></span>
+                обновление каждые 30 сек
+              </span>
+            </div>
+            <div
+              id="posts-feed"
+              class="space-y-2.5 lg:flex-1 lg:min-h-0 lg:overflow-y-auto tg-scroll lg:pr-1"
+            >
+              <!-- Посты рендерятся скриптом из GET /api/posts -->
             </div>
           </div>
         </section>
@@ -950,6 +1106,7 @@
       }
 
       function renderPosts(highlightNewest = false) {
+        if (!feedEl) return;
         feedEl.innerHTML = posts
           .map((post, idx) => {
             const isFresh = highlightNewest && idx === 0 && post.isAgentGenerated;
@@ -1782,6 +1939,356 @@
         document.body.removeChild(link);
       }
 
+      // --- Пульт автопилота ---
+      const autopilotToggle = document.getElementById('autopilot-toggle');
+      const autopilotToggleKnob = document.getElementById('autopilot-toggle-knob');
+      const autopilotStateCaption = document.getElementById('autopilot-state-caption');
+      const autopilotTimeInput = document.getElementById('autopilot-time');
+      const autopilotDaysEl = document.getElementById('autopilot-days');
+      const autopilotChTg = document.getElementById('autopilot-ch-tg');
+      const autopilotChVk = document.getElementById('autopilot-ch-vk');
+      const autopilotSaveBtn = document.getElementById('autopilot-save-btn');
+      const autopilotPublishNowBtn = document.getElementById('autopilot-publish-now-btn');
+      const autopilotPublishStepsEl = document.getElementById('autopilot-publish-steps');
+      const autopilotStatusEl = document.getElementById('autopilot-status');
+      const postsFeedEl = document.getElementById('posts-feed');
+
+      let autopilotEnabled = false;
+      let autopilotSaving = false;
+      let autopilotPublishing = false;
+
+      function renderAutopilotToggle() {
+        autopilotToggle.setAttribute('aria-checked', String(autopilotEnabled));
+        autopilotToggle.setAttribute(
+          'aria-label',
+          autopilotEnabled ? 'Выключить автопилот' : 'Включить автопилот'
+        );
+        autopilotToggle.classList.toggle('bg-emerald-500', autopilotEnabled);
+        autopilotToggle.classList.toggle('bg-slate-300', !autopilotEnabled);
+        autopilotToggleKnob.classList.toggle('translate-x-5', autopilotEnabled);
+        autopilotStateCaption.textContent = autopilotEnabled
+          ? 'Автопилот включён'
+          : 'Автопилот выключен';
+        autopilotStateCaption.classList.toggle('text-emerald-700', autopilotEnabled);
+        autopilotStateCaption.classList.toggle('font-semibold', autopilotEnabled);
+        autopilotStateCaption.classList.toggle('text-slate-500', !autopilotEnabled);
+      }
+
+      function getSelectedAutopilotDays() {
+        return Array.from(
+          autopilotDaysEl.querySelectorAll('.autopilot-day-chip.is-active')
+        )
+          .map((btn) => Number(btn.getAttribute('data-day')))
+          .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
+      }
+
+      function setSelectedAutopilotDays(days) {
+        const active = new Set(Array.isArray(days) ? days : []);
+        autopilotDaysEl.querySelectorAll('.autopilot-day-chip').forEach((btn) => {
+          btn.classList.toggle(
+            'is-active',
+            active.has(Number(btn.getAttribute('data-day')))
+          );
+        });
+      }
+
+      function getSelectedAutopilotChannels() {
+        const channels = [];
+        if (autopilotChTg.checked) channels.push('tg');
+        if (autopilotChVk.checked) channels.push('vk');
+        return channels;
+      }
+
+      function setAutopilotStatus(type, message) {
+        if (!message) {
+          autopilotStatusEl.classList.add('hidden');
+          autopilotStatusEl.textContent = '';
+          return;
+        }
+        autopilotStatusEl.className =
+          'text-xs leading-snug rounded-xl px-3 py-2 animate-fade-up';
+        if (type === 'ok') {
+          autopilotStatusEl.classList.add(
+            'bg-emerald-50',
+            'text-emerald-800',
+            'border',
+            'border-emerald-200'
+          );
+        } else {
+          autopilotStatusEl.classList.add(
+            'bg-red-50',
+            'text-red-800',
+            'border',
+            'border-red-200'
+          );
+        }
+        autopilotStatusEl.textContent = message;
+      }
+
+      async function loadAutopilotConfig() {
+        try {
+          const resp = await fetch(`${getEffectiveProxyBaseUrl()}/api/autopilot`);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          const cfg = await resp.json();
+          autopilotEnabled = Boolean(cfg.enabled);
+          if (typeof cfg.time === 'string' && cfg.time) {
+            autopilotTimeInput.value = cfg.time;
+          }
+          setSelectedAutopilotDays(cfg.days);
+          const channels = Array.isArray(cfg.channels) ? cfg.channels : [];
+          autopilotChTg.checked = channels.includes('tg');
+          autopilotChVk.checked = channels.includes('vk');
+          renderAutopilotToggle();
+        } catch (e) {
+          setAutopilotStatus('error', 'Не удалось загрузить настройки автопилота');
+        }
+      }
+
+      async function saveAutopilotConfig() {
+        if (autopilotSaving) return false;
+        const days = getSelectedAutopilotDays();
+        const channels = getSelectedAutopilotChannels();
+        const time = autopilotTimeInput.value;
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+          setAutopilotStatus('error', 'Укажите время отправки');
+          return false;
+        }
+        if (!days.length) {
+          setAutopilotStatus('error', 'Выберите хотя бы один день недели');
+          return false;
+        }
+        if (!channels.length) {
+          setAutopilotStatus('error', 'Выберите хотя бы один канал');
+          return false;
+        }
+
+        autopilotSaving = true;
+        autopilotSaveBtn.disabled = true;
+        try {
+          const resp = await fetch(`${getEffectiveProxyBaseUrl()}/api/autopilot`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              enabled: autopilotEnabled,
+              time,
+              days,
+              channels,
+            }),
+          });
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          setAutopilotStatus('ok', 'Расписание сохранено');
+          return true;
+        } catch (e) {
+          setAutopilotStatus('error', 'Не удалось сохранить расписание');
+          return false;
+        } finally {
+          autopilotSaving = false;
+          autopilotSaveBtn.disabled = false;
+        }
+      }
+
+      function renderAutopilotPublishSteps(steps) {
+        autopilotPublishStepsEl.classList.remove('hidden');
+        autopilotPublishStepsEl.innerHTML = steps
+          .map((step) => {
+            let icon = '';
+            let rowClass = 'border-slate-200/80 bg-slate-50/70 text-slate-500';
+            if (step.state === 'active') {
+              rowClass = 'border-cyan-400/70 bg-cyan-50/70 text-[#1B3A6B]';
+              icon = `
+                <svg class="w-3.5 h-3.5 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                  <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"></path>
+                </svg>`;
+            } else if (step.state === 'ok') {
+              rowClass = 'border-emerald-300/80 bg-emerald-50/85 text-emerald-800';
+              icon = `
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>`;
+            } else if (step.state === 'error') {
+              rowClass = 'border-red-200 bg-red-50/85 text-red-800';
+              icon = `
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>`;
+            } else {
+              icon = `<span class="w-3.5 h-3.5 rounded-full border border-slate-300 shrink-0" aria-hidden="true"></span>`;
+            }
+            return `
+              <div class="flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${rowClass}">
+                ${icon}
+                <span>${escapeHtml(step.label)}</span>
+              </div>
+            `;
+          })
+          .join('');
+      }
+
+      async function publishNow() {
+        if (autopilotPublishing) return;
+        const channels = getSelectedAutopilotChannels();
+        if (!channels.length) {
+          setAutopilotStatus('error', 'Выберите хотя бы один канал');
+          return;
+        }
+
+        autopilotPublishing = true;
+        autopilotPublishNowBtn.disabled = true;
+        setAutopilotStatus(null, '');
+
+        const proxyBase = getEffectiveProxyBaseUrl();
+        const steps = [
+          { label: 'Генерация поста', state: 'active' },
+          ...channels.map((ch) => ({
+            label: ch === 'tg' ? 'Публикация в Telegram' : 'Публикация в VK',
+            state: 'pending',
+          })),
+        ];
+        renderAutopilotPublishSteps(steps);
+
+        try {
+          const resp = await fetch(`${proxyBase}/generate-auto`, {
+            method: 'POST',
+          });
+          const data = await resp.json().catch(() => null);
+          if (
+            !resp.ok ||
+            !data ||
+            typeof data.text !== 'string' ||
+            !data.text.trim()
+          ) {
+            throw new Error('generation_failed');
+          }
+          steps[0].state = 'ok';
+          renderAutopilotPublishSteps(steps);
+
+          const text = data.text;
+          for (let i = 0; i < channels.length; i++) {
+            const ch = channels[i];
+            const group = demoGroups.find((g) => g.platform === ch);
+            steps[i + 1].state = 'active';
+            renderAutopilotPublishSteps(steps);
+            try {
+              const r = await fetch(`${proxyBase}/publish`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  platform: ch,
+                  target: group ? group.target : '',
+                  text,
+                  imageUrl: null,
+                }),
+              });
+              if (!r.ok) throw new Error(`HTTP ${r.status}`);
+              steps[i + 1].state = 'ok';
+            } catch (e) {
+              steps[i + 1].state = 'error';
+            }
+            renderAutopilotPublishSteps(steps);
+          }
+
+          const anyFailed = steps.some((s) => s.state === 'error');
+          setAutopilotStatus(
+            anyFailed ? 'error' : 'ok',
+            anyFailed
+              ? 'Пост опубликован не во все каналы'
+              : 'Пост опубликован'
+          );
+          loadPostsFeed();
+        } catch (e) {
+          steps[0].state = 'error';
+          renderAutopilotPublishSteps(steps);
+          setAutopilotStatus('error', 'Не удалось сгенерировать пост');
+        } finally {
+          autopilotPublishing = false;
+          autopilotPublishNowBtn.disabled = false;
+        }
+      }
+
+      // --- Лента публикаций ---
+      function formatPostTime(ts) {
+        const d = new Date(ts);
+        if (Number.isNaN(d.getTime())) return '';
+        const hhmm = d.toLocaleTimeString('ru-RU', {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        const now = new Date();
+        if (d.toDateString() === now.toDateString()) return `сегодня, ${hhmm}`;
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        if (d.toDateString() === yesterday.toDateString()) {
+          return `вчера, ${hhmm}`;
+        }
+        return `${d.toLocaleDateString('ru-RU', {
+          day: 'numeric',
+          month: 'long',
+        })}, ${hhmm}`;
+      }
+
+      function renderPostsFeed(items) {
+        if (!Array.isArray(items) || !items.length) {
+          postsFeedEl.innerHTML = `
+            <div class="rounded-xl border border-dashed border-cyan-500/40 bg-slate-50/70 px-4 py-6 text-center text-sm text-slate-500">
+              Публикаций пока нет — запустите агента или включите автопилот
+            </div>
+          `;
+          return;
+        }
+
+        postsFeedEl.innerHTML = items
+          .map((post) => {
+            const channels = Array.isArray(post.channels) ? post.channels : [];
+            const badges = channels
+              .map((ch) => {
+                const name = ch && ch.name === 'vk' ? 'vk' : 'tg';
+                const group = demoGroups.find((g) => g.platform === name);
+                const url =
+                  (ch && typeof ch.url === 'string' && ch.url) ||
+                  (group ? group.target : '');
+                const openLink = url
+                  ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="text-[11px] font-semibold text-[#1B3A6B] hover:underline underline-offset-2">Открыть</a>`
+                  : '';
+                return `
+                  <span class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/80 bg-slate-50/80 px-2 py-1">
+                    ${renderPlatformIcon(name)}
+                    <span class="text-[11px] font-semibold text-slate-700">${
+                      name === 'tg' ? 'Telegram' : 'VK'
+                    }</span>
+                    ${openLink}
+                  </span>
+                `;
+              })
+              .join('');
+
+            return `
+              <article class="rounded-xl border border-slate-200/70 bg-white p-3.5 shadow-sm transition-all duration-200 hover:border-cyan-400/55 hover:shadow-md">
+                <p class="text-[13px] leading-relaxed text-slate-800 whitespace-pre-line">${escapeHtml(
+                  post.text || ''
+                )}</p>
+                <div class="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex flex-wrap items-center gap-1.5">${badges}</div>
+                  <span class="text-[11px] text-slate-400 tabular-nums">${escapeHtml(
+                    formatPostTime(post.ts)
+                  )}</span>
+                </div>
+              </article>
+            `;
+          })
+          .join('');
+      }
+
+      async function loadPostsFeed() {
+        try {
+          const resp = await fetch(`${getEffectiveProxyBaseUrl()}/api/posts`);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          renderPostsFeed(await resp.json());
+        } catch (e) {
+          // оставляем прежнее содержимое ленты
+        }
+      }
+
       function initFirstVisitBubble() {
         try {
           if (!localStorage.getItem(STORAGE_FIRST_VISIT_HINT_KEY)) {
@@ -1839,6 +2346,33 @@
       downloadCoverLimitBtn.addEventListener('click', downloadGeneratedCover);
       downloadCoverManualBtn.addEventListener('click', downloadGeneratedCover);
 
+      // Пульт автопилота
+      autopilotToggle.addEventListener('click', async () => {
+        if (autopilotSaving) return;
+        const prev = autopilotEnabled;
+        autopilotEnabled = !prev;
+        renderAutopilotToggle();
+        const saved = await saveAutopilotConfig();
+        if (!saved) {
+          autopilotEnabled = prev;
+          renderAutopilotToggle();
+        }
+      });
+      autopilotSaveBtn.addEventListener('click', saveAutopilotConfig);
+      autopilotPublishNowBtn.addEventListener('click', publishNow);
+      autopilotDaysEl.addEventListener('click', (e) => {
+        const chip = e.target.closest('.autopilot-day-chip');
+        if (chip) chip.classList.toggle('is-active');
+      });
+
+      // Отправка задачи по Enter в однострочном поле
+      taskInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          runBtn.click();
+        }
+      });
+
       // Init
       renderPosts(false);
       renderSubscriberQuestions();
@@ -1847,6 +2381,10 @@
       renderConnectedGroups();
       updateCounterAndButton();
       initFirstVisitBubble();
+      renderPostsFeed([]);
+      loadPostsFeed();
+      setInterval(loadPostsFeed, 30000);
+      loadAutopilotConfig();
     </script>
   </body>
 </html>
