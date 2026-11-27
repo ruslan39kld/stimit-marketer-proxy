@@ -1,0 +1,6 @@
+{
+  "enabled": false,
+  "time": "10:00",
+  "days": [1, 2, 3, 4, 5],
+  "channels": ["tg", "vk"]
+}

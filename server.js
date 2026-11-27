@@ -1,26 +1,18 @@
-import crypto from 'node:crypto';
 import express from 'express';
-import fs from 'node:fs';
-import https from 'node:https';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { generateWithGigachat } from './src/gigachat.js';
+import { publishTelegram, ALLOWED_TARGETS } from './src/telegram.js';
+import { vkToken, tokenDesc, loadVkToken, publishVk, vkSelfTest } from './src/vk.js';
+import { generateAutoPost } from './src/knowledge.js';
+import { ensureAutopilotConfig, autopilotTick } from './src/autopilot.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const ALLOWED_TARGETS = [
-  'https://t.me/stimit_ai_marketer_demo',
-  'https://vk.ru/stimit_ai_marketer_demo',
-];
 
 const STOP_WORDS = [
   'сука', 'блядь', 'хуй', 'пизд', 'ебал', 'ебат',
   'нацизм', 'нацист', 'террор', 'террорист', 'захват власти', 'свержение',
 ];
-
-const VK_OWNER_ID = -243694741;
-const VK_API_VERSION = '5.199';
-const TG_API = 'https://api.telegram.org';
-const VK_API = 'https://api.vk.ru/method';
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
@@ -55,206 +47,6 @@ function rateLimited(ip) {
 function hasStopWords(text) {
   const lower = text.toLowerCase();
   return STOP_WORDS.find((w) => lower.includes(w));
-}
-
-function chatIdFromTarget(target) {
-  const m = target.match(/^https?:\/\/t\.me\/([\w]+)/);
-  return m ? '@' + m[1] : null;
-}
-
-async function publishTelegram(target, text, imageUrl) {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (!token) throw new Error('telegram_not_configured');
-  const chat_id = chatIdFromTarget(target);
-  if (!chat_id) throw new Error('bad_target');
-  if (imageUrl) {
-    const r = await fetch(`${TG_API}/bot${token}/sendPhoto`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id, photo: imageUrl, caption: text }),
-    });
-    const data = await r.json();
-    if (!data.ok) {
-      console.log(`publish TG ERROR: ${data.description || 'unknown'}`);
-      throw new Error('telegram_api_error');
-    }
-    console.log('publish TG OK');
-    return { id: data.result?.message_id };
-  }
-  const r = await fetch(`${TG_API}/bot${token}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id, text }),
-  });
-  const data = await r.json();
-  if (!data.ok) {
-    console.log(`publish TG ERROR: ${data.description || 'unknown'}`);
-    throw new Error('telegram_api_error');
-  }
-  console.log('publish TG OK');
-  return { id: data.result?.message_id };
-}
-
-function tokenDesc(token) {
-  if (!token) return 'set=no len=0 head=- tail=-';
-  return `set=yes len=${token.length} head=${token.slice(0, 4)} tail=${token.slice(-4)}`;
-}
-
-const VK_TOKEN_FILE = '/data/vk_token.json';
-const VK_CLIENT_ID = process.env.VK_CLIENT_ID || '';
-
-const vkToken = { access_token: '', refresh_token: '', expires_at: 0, device_id: '' };
-
-function tokenMask(token) {
-  if (!token) return '-';
-  return `${token.slice(0, 4)}...${token.slice(-4)}`;
-}
-
-function loadVkToken() {
-  try {
-    if (fs.existsSync(VK_TOKEN_FILE)) {
-      const data = JSON.parse(fs.readFileSync(VK_TOKEN_FILE, 'utf8'));
-      vkToken.access_token = data.access_token || '';
-      vkToken.refresh_token = data.refresh_token || '';
-      vkToken.expires_at = Number(data.expires_at) || 0;
-      vkToken.device_id = data.device_id || '';
-      console.log(`vk token loaded from file: ${tokenMask(vkToken.access_token)}`);
-      return;
-    }
-  } catch (e) {
-    console.log(`vk token file read ERROR: ${e.message}`);
-  }
-  vkToken.access_token = process.env.VK_ACCESS_TOKEN || '';
-  vkToken.refresh_token = process.env.VK_REFRESH_TOKEN || '';
-  vkToken.device_id = process.env.VK_DEVICE_ID || '';
-  vkToken.expires_at = Date.now() + 50 * 60 * 1000;
-}
-
-function saveVkToken() {
-  try {
-    fs.mkdirSync(path.dirname(VK_TOKEN_FILE), { recursive: true });
-    fs.writeFileSync(VK_TOKEN_FILE, JSON.stringify(vkToken, null, 2));
-  } catch (e) {
-    console.log(`vk token file save ERROR: ${e.message}`);
-  }
-}
-
-function refreshVkToken() {
-  return new Promise((resolve) => {
-    const body = new URLSearchParams({
-      grant_type: 'refresh_token',
-      client_id: VK_CLIENT_ID,
-      device_id: vkToken.device_id,
-      refresh_token: vkToken.refresh_token,
-      state: 'stimit',
-    }).toString();
-    const req = https.request({
-      hostname: 'id.vk.com',
-      path: '/oauth2/auth',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Content-Length': Buffer.byteLength(body),
-      },
-    }, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-          if (json.access_token) {
-            vkToken.access_token = json.access_token;
-            vkToken.refresh_token = json.refresh_token || vkToken.refresh_token;
-            vkToken.device_id = json.device_id || vkToken.device_id;
-            vkToken.expires_at = Date.now() + Number(json.expires_in || 3600) * 1000;
-            saveVkToken();
-            console.log(`vk refresh OK: token ${tokenMask(vkToken.access_token)}`);
-            resolve(true);
-          } else {
-            console.log(`vk refresh ERROR ${json.error || 'unknown'}${json.error_description ? ` ${json.error_description}` : ''}`);
-            resolve(false);
-          }
-        } catch (e) {
-          console.log(`vk refresh ERROR ${e.message}`);
-          resolve(false);
-        }
-      });
-    });
-    req.on('error', (e) => {
-      console.log(`vk refresh ERROR ${e.message}`);
-      resolve(false);
-    });
-    req.write(body);
-    req.end();
-  });
-}
-
-async function ensureVkToken() {
-  if (!vkToken.access_token && !vkToken.refresh_token) throw new Error('vk_not_configured');
-  if (vkToken.refresh_token && vkToken.expires_at - Date.now() < 5 * 60 * 1000) {
-    await refreshVkToken();
-  }
-  if (!vkToken.access_token) throw new Error('vk_not_configured');
-  return vkToken.access_token;
-}
-
-async function vkCall(method, params) {
-  const token = await ensureVkToken();
-  const qs = new URLSearchParams({
-    ...params,
-    v: VK_API_VERSION,
-  }).toString();
-  const r = await fetch(`${VK_API}/${method}?${qs}`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  });
-  const data = await r.json();
-  if (data.error) {
-    console.log(`publish VK ERROR ${method}: code=${data.error.error_code} ${data.error.error_msg || 'unknown'} token=${tokenMask(token)}`);
-    throw new Error(`vk_api_error_${data.error.error_code}`);
-  }
-  console.log(`publish VK OK: ${method}`);
-  return data.response;
-}
-
-async function vkUploadWallPhoto(imageUrl) {
-  const imgRes = await fetch(imageUrl);
-  if (!imgRes.ok) throw new Error('vk_image_fetch_failed');
-  const blob = await imgRes.blob();
-
-  const server = await vkCall('photos.getWallUploadServer', {
-    group_id: String(Math.abs(VK_OWNER_ID)),
-  });
-
-  const form = new FormData();
-  form.append('photo', blob, 'photo.jpg');
-  const up = await fetch(server.upload_url, { method: 'POST', body: form });
-  const uploaded = await up.json();
-  if (uploaded.error) {
-    console.log(`publish VK ERROR: ${uploaded.error.error_msg || 'unknown'} (code ${uploaded.error.error_code})`);
-  }
-  if (!uploaded.photo) throw new Error('vk_upload_failed');
-
-  const saved = await vkCall('photos.saveWallPhoto', {
-    group_id: String(Math.abs(VK_OWNER_ID)),
-    photo: uploaded.photo,
-    server: String(uploaded.server),
-    hash: uploaded.hash,
-  });
-  const photo = Array.isArray(saved) ? saved[0] : saved;
-  if (!photo?.owner_id || !photo?.id) throw new Error('vk_save_failed');
-  return `photo${photo.owner_id}_${photo.id}`;
-}
-
-async function publishVk(text, imageUrl) {
-  const params = {
-    owner_id: String(VK_OWNER_ID),
-    message: text,
-  };
-  if (imageUrl) {
-    params.attachments = await vkUploadWallPhoto(imageUrl);
-  }
-  const res = await vkCall('wall.post', params);
-  return { id: res.post_id };
 }
 
 app.post('/publish', async (req, res) => {
@@ -302,99 +94,6 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 // --- Статика фронта ---
 app.use(express.static(__dirname));
 
-// --- GigaChat: генерация постов ---
-const GIGACHAT_OAUTH_URL = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth';
-const GIGACHAT_CHAT_URL = 'https://gigachat.devices.sberbank.ru/api/v1/chat/completions';
-const GIGACHAT_SCOPE = 'GIGACHAT_API_PERS';
-
-// Как в Stimit 3.0 (server/gigachat.ts): сертификат Минцифры не используем,
-// проверка цепочки TLS отключена на агенте GigaChat.
-const gigachatAgent = new https.Agent({ rejectUnauthorized: false });
-
-let cachedToken = null; // { token, expiresAt }
-
-function httpsPostJson(url, { headers = {}, body, timeoutMs }) {
-  return new Promise((resolve, reject) => {
-    const payload = typeof body === 'string' ? body : JSON.stringify(body);
-    const u = new URL(url);
-    const req = https.request(
-      {
-        hostname: u.hostname,
-        port: u.port || 443,
-        path: u.pathname + u.search,
-        method: 'POST',
-        agent: gigachatAgent,
-        headers: { 'Content-Length': Buffer.byteLength(payload), ...headers },
-        timeout: timeoutMs,
-      },
-      (res) => {
-        const chunks = [];
-        res.on('data', (c) => chunks.push(c));
-        res.on('end', () => {
-          const raw = Buffer.concat(chunks).toString('utf8');
-          let json = null;
-          try { json = JSON.parse(raw); } catch (e) {}
-          resolve({ status: res.statusCode, json });
-        });
-      }
-    );
-    req.on('timeout', () => req.destroy(new Error('timeout')));
-    req.on('error', reject);
-    req.write(payload);
-    req.end();
-  });
-}
-
-async function getGigachatToken() {
-  const credentials = process.env.GIGACHAT_CREDENTIALS;
-  if (!credentials) throw new Error('gigachat_not_configured');
-  if (cachedToken && Date.now() < cachedToken.expiresAt) return cachedToken.token;
-
-  const res = await httpsPostJson(GIGACHAT_OAUTH_URL, {
-    headers: {
-      'Authorization': `Basic ${credentials}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'RqUID': crypto.randomUUID(),
-    },
-    body: `scope=${GIGACHAT_SCOPE}`,
-    timeoutMs: 30000,
-  });
-  if (res.status !== 200 || !res.json?.access_token) {
-    throw new Error(`gigachat_auth_failed:${res.status}`);
-  }
-  cachedToken = {
-    token: res.json.access_token,
-    expiresAt: Date.now() + 25 * 60 * 1000,
-  };
-  return cachedToken.token;
-}
-
-const GIGACHAT_SYSTEM_PROMPT = 'Ты — маркетолог студии STIMIT. Пиши продающие посты для Telegram и VK: живой тон, структура, призыв к действию. До 900 знаков. Не выдумывай цифры и факты.';
-
-async function generateWithGigachat(task, systemPrompt = GIGACHAT_SYSTEM_PROMPT) {
-  const token = await getGigachatToken();
-  const res = await httpsPostJson(GIGACHAT_CHAT_URL, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: {
-      model: 'GigaChat',
-      max_tokens: 1500,
-      temperature: 0.7,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: task },
-      ],
-    },
-    timeoutMs: 30000,
-  });
-  if (res.status !== 200) throw new Error(`gigachat_api_error:${res.status}`);
-  const text = res.json?.choices?.[0]?.message?.content;
-  if (!text) throw new Error('gigachat_empty_response');
-  return text;
-}
-
 const genHits = new Map(); // ip -> number[]
 const GEN_WINDOW_1H = 60 * 60 * 1000;
 
@@ -407,6 +106,7 @@ function genRateLimited(ip) {
   return false;
 }
 
+// --- GigaChat: генерация постов ---
 app.post('/generate', async (req, res) => {
   const { task } = req.body || {};
   if (typeof task !== 'string' || !task.trim()) {
@@ -433,41 +133,6 @@ app.post('/generate', async (req, res) => {
 });
 
 // --- Авто-генерация поста из базы знаний ---
-const KB_FILE = '/data/stimit_base.md';
-const AUTO_STATE_FILE = '/data/auto_state.json';
-
-function parseTopics(base) {
-  const lines = base.split('\n');
-  const start = lines.findIndex((l) => l.trim().startsWith('## ТЕМЫ ДЛЯ ПОСТОВ'));
-  if (start === -1) return [];
-  const topics = [];
-  for (let i = start + 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (line.startsWith('## ')) break;
-    const m = line.match(/^\d+\.\s+(.+)/);
-    if (m) topics.push(m[1].trim());
-  }
-  return topics;
-}
-
-function loadAutoState() {
-  try {
-    const data = JSON.parse(fs.readFileSync(AUTO_STATE_FILE, 'utf8'));
-    return { topicIndex: Number(data.topicIndex) || 0 };
-  } catch (e) {
-    return { topicIndex: 0 };
-  }
-}
-
-function saveAutoState(state) {
-  try {
-    fs.mkdirSync(path.dirname(AUTO_STATE_FILE), { recursive: true });
-    fs.writeFileSync(AUTO_STATE_FILE, JSON.stringify(state, null, 2));
-  } catch (e) {
-    console.log(`auto state save ERROR: ${e.message}`);
-  }
-}
-
 const autoHits = new Map(); // ip -> number[]
 
 function autoRateLimited(ip) {
@@ -477,36 +142,6 @@ function autoRateLimited(ip) {
   if (list.length >= 5) return true;
   list.push(now);
   return false;
-}
-
-async function generateAutoPost() {
-  let base;
-  try {
-    base = fs.readFileSync(KB_FILE, 'utf8');
-  } catch (e) {
-    throw Object.assign(new Error('no_base'), { code: 'no_base' });
-  }
-
-  const topics = parseTopics(base);
-  if (!topics.length) {
-    throw Object.assign(new Error('no_base'), { code: 'no_base' });
-  }
-
-  const state = loadAutoState();
-  const topic = topics[state.topicIndex % topics.length];
-
-  const systemPrompt = [
-    'Ты — SMM-агент студии STIMIT. Ниже — база знаний студии.',
-    '',
-    base,
-    '',
-    `Тема поста: ${topic}`,
-    '',
-    'Напиши пост по этой теме, строго соблюдая правила из разделов ТОН И СТИЛЬ и ЗАПРЕТЫ базы знаний.',
-  ].join('\n');
-  const text = await generateWithGigachat(topic, systemPrompt);
-  saveAutoState({ topicIndex: (state.topicIndex + 1) % topics.length });
-  return { topic, text };
 }
 
 app.post('/generate-auto', async (req, res) => {
@@ -535,86 +170,6 @@ app.post('/generate-auto', async (req, res) => {
 });
 
 // --- Автопилот: генерация и публикация по расписанию ---
-const AUTOPILOT_FILE = '/data/autopilot.json';
-const AUTOPILOT_STATE_FILE = '/data/autopilot_state.json';
-const AUTOPILOT_DEFAULT = { enabled: false, time: '10:00', days: [1, 2, 3, 4, 5], channels: ['tg', 'vk'] };
-
-function ensureAutopilotConfig() {
-  try {
-    if (!fs.existsSync(AUTOPILOT_FILE)) {
-      fs.mkdirSync(path.dirname(AUTOPILOT_FILE), { recursive: true });
-      fs.writeFileSync(AUTOPILOT_FILE, JSON.stringify(AUTOPILOT_DEFAULT, null, 2));
-    }
-  } catch (e) {
-    console.log(`autopilot ERROR config create: ${e.message}`);
-  }
-}
-
-function loadAutopilotConfig() {
-  try {
-    return { ...AUTOPILOT_DEFAULT, ...JSON.parse(fs.readFileSync(AUTOPILOT_FILE, 'utf8')) };
-  } catch (e) {
-    return { ...AUTOPILOT_DEFAULT };
-  }
-}
-
-function autopilotLastRun() {
-  try {
-    return JSON.parse(fs.readFileSync(AUTOPILOT_STATE_FILE, 'utf8')).lastRun || null;
-  } catch (e) {
-    return null;
-  }
-}
-
-function saveAutopilotLastRun(day) {
-  try {
-    fs.mkdirSync(path.dirname(AUTOPILOT_STATE_FILE), { recursive: true });
-    fs.writeFileSync(AUTOPILOT_STATE_FILE, JSON.stringify({ lastRun: day }, null, 2));
-  } catch (e) {
-    console.log(`autopilot ERROR state save: ${e.message}`);
-  }
-}
-
-function stripMarkdown(text) {
-  return text
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)')
-    .replace(/\*\*/g, '')
-    .replace(/^#+\s*/gm, '');
-}
-
-async function autopilotTick() {
-  const cfg = loadAutopilotConfig();
-  console.log(`autopilot: tick enabled=${cfg.enabled}`);
-  if (!cfg.enabled) return;
-
-  const now = new Date();
-  const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  if (hhmm !== cfg.time) return;
-  if (!Array.isArray(cfg.days) || !cfg.days.includes(now.getDay())) return;
-
-  const today = now.toISOString().slice(0, 10);
-  if (autopilotLastRun() === today) return;
-  saveAutopilotLastRun(today);
-
-  try {
-    const { topic, text } = await generateAutoPost();
-    console.log(`autopilot: generated topic=${topic}`);
-    const clean = stripMarkdown(text);
-    for (const ch of cfg.channels || []) {
-      try {
-        if (ch === 'tg') await publishTelegram(ALLOWED_TARGETS[0], clean, null);
-        else if (ch === 'vk') await publishVk(clean, null);
-        else continue;
-        console.log(`autopilot: published ${ch} OK`);
-      } catch (e) {
-        console.log(`autopilot ERROR publish ${ch}: ${e.message}`);
-      }
-    }
-  } catch (e) {
-    console.log(`autopilot ERROR ${e.message}`);
-  }
-}
-
 const port = Number(process.env.PORT) || 3000;
 loadVkToken();
 app.listen(port, () => {
@@ -625,20 +180,3 @@ app.listen(port, () => {
   setInterval(autopilotTick, 60 * 1000);
   vkSelfTest();
 });
-
-async function vkSelfTest() {
-  try {
-    const token = await ensureVkToken();
-    const r = await fetch(`${VK_API}/users.get?v=${VK_API_VERSION}`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
-    const data = await r.json();
-    if (data.error) {
-      console.log(`vk selftest: code=${data.error.error_code} ${data.error.error_msg || 'unknown'}`);
-    } else {
-      console.log('vk selftest: OK');
-    }
-  } catch (e) {
-    console.log(`vk selftest: ${e.message}`);
-  }
-}
